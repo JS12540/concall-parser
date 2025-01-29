@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "CONCALL-SUMMARIZER"
+version = "0.1.0"
+description = ""
+authors = ["Jay shah <jayshah0726@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "concall_summarizer", from = "." },
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "0.4.1"
+pre-commit = "3.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 80
+indent-width = 4
+target-version = "py310"
+extend-exclude = [
+    "__init__.py",
+    "migrations",
+]
+
+[tool.ruff.lint]
+extend-select = [
+    "UP", # pyupgrade
+    "E", # pycodestyle
+    "I", # isort
+    "D", # pydocstyle
+]
+
+ignore = [
+    "D100", # undocumented-public-module
+    "D104", # undocumented-public-package
+    "D106", # undocumented-public-nested-class
+    "D107", # undocumented-public-init
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
