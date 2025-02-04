@@ -68,9 +68,12 @@ class ConferenceCallParser:
 
     def extract_management_team(self) -> list[dict[str, str]]:
         """Extract management team members and their designations."""
-        management_pattern = r"MR\.\s*(.*?)\s*–\s*(.*?)\s*–\s*(.*?)\s*LIMITED"
+        management_pattern = re.compile(
+            r"MR\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", 
+            re.IGNORECASE
+        )
+    
         matches = re.finditer(management_pattern, self.combined_text)
-
         management_team = []
         for match in matches:
             management_team.append(
