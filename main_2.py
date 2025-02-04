@@ -22,7 +22,7 @@ management_end_pattern = (
     None  # This will be set dynamically to the company name
 )
 management_entry_pattern = re.compile(
-    r"MR\.\s+([A-Z\s]+)\s+–\s+([A-Z,\s&]+)\s*–\s*([A-Z\s]+LIMITED)",
+     r"(?:MR|MS)\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", 
     re.IGNORECASE,
 )
 speaker_pattern = re.compile(r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)")
@@ -60,6 +60,10 @@ class ConferenceCallParser:
         self.transcript = transcript_dict
         self.combined_text = "\n".join(transcript_dict.values())
 
+    def clean_text(self,text: str) -> str:
+        """Remove extra spaces, normalize case, and ensure consistency."""
+        return re.sub(r'\s+', ' ', text).strip().lower()
+    
     def extract_company_name(self) -> str:
         """Extract company name that appears after 'Yours faithfully'."""
         pattern = r"Yours faithfully,\s*For\s*(.*?)\s*_"
@@ -69,9 +73,9 @@ class ConferenceCallParser:
     def extract_management_team(self) -> list[dict[str, str]]:
         """Extract management team members and their designations."""
         management_pattern = re.compile(
-            r"MR\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", 
-            re.IGNORECASE
+             r"(?:MR|MS)\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", re.IGNORECASE
         )
+
     
         matches = re.finditer(management_pattern, self.combined_text)
         management_team = []
@@ -94,17 +98,24 @@ class ConferenceCallParser:
         current_role = ""
         current_content = []
 
-        def categorize_speaker(speaker: str) -> str:
+
+        def categorize_speaker(speaker: str,management_team) -> str:
             speaker = speaker.strip()
-            if speaker == "Moderator":
+            speaker = self.clean_text(speaker)
+
+            if speaker == "moderator":
                 return "moderator"
-            elif any(
-                name["name"] in speaker
-                for name in self.extract_management_team()
-            ):
-                return "management"
-            else:
-                return "analysts"
+
+            for member in management_team:
+                cleaned_name = self.clean_text(member["name"])
+                
+                # Use regex word boundary match for more accurate detection
+                if re.search(r'\b' + re.escape(cleaned_name) + r'\b', speaker, re.IGNORECASE):
+                    return "management"
+
+            return "analysts"
+        
+        manage_team = self.extract_management_team()
 
         for line in lines:
             # Check for new speaker
@@ -119,7 +130,7 @@ class ConferenceCallParser:
 
                 speaker, content = line.split(":", 1)
                 current_speaker = speaker.strip()
-                current_role = categorize_speaker(current_speaker)
+                current_role = categorize_speaker(current_speaker,management_team=manage_team)
                 if content.strip():
                     current_content.append(content.strip())
             elif line.strip() and current_speaker:
