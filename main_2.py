@@ -73,7 +73,7 @@ class ConferenceCallParser:
     def extract_management_team(self) -> list[dict[str, str]]:
         """Extract management team members and their designations."""
         management_pattern = re.compile(
-             r"(?:MR|MS)\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", re.IGNORECASE
+             r"(?:MR|MS)\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)", re.IGNORECASE # noqa
         )
 
     
@@ -167,7 +167,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> None:
 
     # 3. Extract dialogues
     dialogues = parser.extract_dialogues()
-
+    
     # Print dialogues by category
     for category in ["moderator", "management", "analysts"]:
         print(f"\n=== {category.title()} Dialogues ===")
