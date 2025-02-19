@@ -26,7 +26,8 @@ If no management information is found, return an empty list: [].
 class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
-    def process(self, page_text):
+    @staticmethod
+    def process(page_text):
         """Process the given page text to extract relevant management information.
 
         Args:
