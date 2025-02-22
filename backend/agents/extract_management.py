@@ -7,18 +7,16 @@ Given a document page, identify the names of management personnel and their corr
 
 Extract and return the information in the following JSON format:
 
-[
-    {
-        "management_name": "<Name of the person>",
-        "designation": "<Designation of the person>"
-    }
-]
+{
+   "management_name_1": "designation_1",
+   "management_name_2": "designation_2",
+}
 
 Ensure:
 
 The response strictly follows the JSON format.
 Only include relevant management personnel.
-If no management information is found, return an empty list: [].
+If no management information is found, return an empty dict: {}.
 
 """  # noqa
 
