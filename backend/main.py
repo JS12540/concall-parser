@@ -1,5 +1,5 @@
+import json
 import re
-from dataclasses import dataclass
 
 import pdfplumber
 
@@ -8,32 +8,7 @@ from backend.agents.extract_management import ExtractManagement
 # Path to the uploaded PDF
 pdf_path = "d9791ed3-f139-4c06-8750-510adfa779eb.pdf"
 
-# Lists to store extracted information
-management_people = []
-dialogues = {}
-
-# Patterns to identify key sections
-date_pattern = re.compile(
-    r"Date:\s*(\d{1,2}\w{2}\s+\w+\s+\d{4})", re.IGNORECASE
-)
-company_pattern = re.compile(
-    r"Yours faithfully,\s*For\s*([A-Z\s]+LIMITED)", re.IGNORECASE
-)
-management_start_pattern = re.compile(r"MANAGEMENT:", re.IGNORECASE)
-management_end_pattern = (
-    None  # This will be set dynamically to the company name
-)
-management_entry_pattern = re.compile(
-    r"(?:MR|MS)\.\s*([A-Z\s]+?)\s*[-–—]+\s*([A-Z,\s&]+?)\s*[-–—]+\s*([A-Z\s]+LIMITED)",
-    re.IGNORECASE,
-)
 speaker_pattern = re.compile(r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)")
-
-# Variables to store extracted data
-conference_date = None
-company_name = None
-current_speaker = None
-inside_management_section = False
 
 page_numbers = {}
 
@@ -46,17 +21,13 @@ with pdfplumber.open(pdf_path) as pdf:
             page_number += 1
 
 
-@dataclass
-class DialogueEntry:
-    """Dataclass to represent a dialogue entry."""
-
-    speaker: str
-    role: str
-    content: str
-
-
 class ConferenceCallParser:
     """Class to parse conference call transcript."""
+
+    def __init__(self):
+        self.speaker_pattern = re.compile(
+            r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)"
+        )
 
     def clean_text(self, text: str) -> str:
         """Remove extra spaces, normalize case, and ensure consistency."""
@@ -73,92 +44,69 @@ class ConferenceCallParser:
         response = ExtractManagement.process(page_text=text)
         return response
 
-    def extract_dialogues(self) -> dict[str, list[DialogueEntry]]:
-        """Extract and categorize dialogues by participant type."""
-        lines = self.combined_text.split("\n")
-        dialogues = {"moderator": [], "management": [], "analysts": []}
+    def extract_dialogues(
+        self, transcript_dict: dict[int, str], speakers: list[str]
+    ) -> dict:
+        """Extract dialogues from the transcript and classify speakers."""
+        dialogues = {}
+        current_speaker = None
 
-        current_speaker = ""
-        current_role = ""
-        current_content = []
+        for page_number, text in transcript_dict.items():
+            if page_number < 3:  # Skip first two pages
+                continue
 
-        def categorize_speaker(speaker: str, management_team) -> str:
-            speaker = speaker.strip()
-            speaker = self.clean_text(speaker)
+            lines = text.split("\n")
+            for line in lines:
+                match = self.speaker_pattern.match(line)
+                if match:
+                    speaker = match.group("speaker").strip()
+                    dialogue = match.group("dialogue").strip()
 
-            if speaker == "moderator":
-                return "moderator"
+                    if speaker not in dialogues:
+                        dialogues[speaker] = {"text": "", "pages": []}
 
-            for member in management_team:
-                cleaned_name = self.clean_text(member["name"])
+                    current_speaker = speaker
+                    dialogues[current_speaker]["text"] += " " + dialogue
+                    if page_number not in dialogues[current_speaker]["pages"]:
+                        dialogues[current_speaker]["pages"].append(page_number)
 
-                # Use regex word boundary match for more accurate detection
-                if re.search(
-                    r"\b" + re.escape(cleaned_name) + r"\b",
-                    speaker,
-                    re.IGNORECASE,
-                ):
-                    return "management"
-
-            return "analysts"
-
-        manage_team = self.extract_management_team()
-
-        for line in lines:
-            # Check for new speaker
-            if ":" in line and not line.strip().endswith(":"):
-                if current_speaker and current_content:
-                    role = current_role
-                    content = " ".join(current_content)
-                    dialogues[role].append(
-                        DialogueEntry(current_speaker, role, content)
-                    )
-                    current_content = []
-
-                speaker, content = line.split(":", 1)
-                current_speaker = speaker.strip()
-                current_role = categorize_speaker(
-                    current_speaker, management_team=manage_team
-                )
-                if content.strip():
-                    current_content.append(content.strip())
-            elif line.strip() and current_speaker:
-                current_content.append(line.strip())
-
-        # Add last dialogue
-        if current_speaker and current_content:
-            dialogues[current_role].append(
-                DialogueEntry(
-                    current_speaker, current_role, " ".join(current_content)
-                )
-            )
+                elif (
+                    current_speaker and line.strip()
+                ):  # Continue dialogue for current speaker
+                    dialogues[current_speaker]["text"] += " " + line.strip()
 
         return dialogues
 
 
-def parse_conference_call(transcript_dict: dict[int, str]) -> None:
+def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
+    company_name = ""
+    management_team = {}
+
+    # Extract company name and management team
     for page_number, text in transcript_dict.items():
-        print(f"Page {page_number}")
         if page_number == 1:
             company_name = parser.extract_company_name(text=text)
         elif page_number == 2:
             management_team = parser.extract_management_team(text=text)
 
-    print(company_name)
-    print(management_team)
+    print(f"Company Name: {company_name}")
+    # Create speakers list
+    speakers = ["Moderator"]
+    management_team_dict = json.loads(management_team)
+    speakers.extend(management_team_dict.keys())
 
-    # # 3. Extract dialogues
-    # dialogues = parser.extract_dialogues()
+    # Extract dialogues
+    dialogues = parser.extract_dialogues(transcript_dict, speakers)
 
-    # # Print dialogues by category
-    # for category in ["moderator", "management", "analysts"]:
-    #     print(f"\n=== {category.title()} Dialogues ===")
-    #     for entry in dialogues[category]:
-    #         print(f"\nSpeaker: {entry.speaker}")
-    #         print(f"Content: {entry.content}")
-    #         print("-" * 50)
+    # Identify analysts and add them to the speaker list
+    identified_analysts = [
+        spk for spk in dialogues.keys() if spk not in speakers
+    ]
+    speakers.extend(identified_analysts)
+
+    print(json.dumps(dialogues, indent=4))
 
 
 # Example usage
