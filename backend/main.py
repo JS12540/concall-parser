@@ -21,6 +21,9 @@ with pdfplumber.open(pdf_path) as pdf:
             page_number += 1
 
 
+# TODO: extract to utils
+# TODO: temp text storage for testing, human verification
+
 class ConferenceCallParser:
     """Class to parse conference call transcript."""
 
