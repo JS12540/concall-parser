@@ -1,4 +1,4 @@
-from constants import GROQ_API_KEY
+from get_env_vars import GROQ_API_KEY
 from groq import Groq
 
 client = Groq(api_key=GROQ_API_KEY)
