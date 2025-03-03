@@ -3,12 +3,17 @@ import re
 
 import pdfplumber
 
+from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 
 # Path to the uploaded PDF
 pdf_path = "d9791ed3-f139-4c06-8750-510adfa779eb.pdf"
 
 speaker_pattern = re.compile(r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)")
+analyst_pattern = re.compile(
+    r"The next question is from the line of (?P<analyst>.+?) from (?P<company>.+?)\."
+)  # noqa
+
 
 page_numbers = {}
 
@@ -44,17 +49,19 @@ class ConferenceCallParser:
         response = ExtractManagement.process(page_text=text)
         return response
 
-    def extract_dialogues(
-        self, transcript_dict: dict[int, str], speakers: list[str]
-    ) -> dict:
-        """Extract dialogues from the transcript and classify speakers."""
-        dialogues = {}
-        current_speaker = None
+    def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
+        """Extract dialogues and classify stages."""
+        dialogues = {
+            "Commentary_and_Future_Outlook": [],
+            "Management_Analyst": {},
+            "End": [],
+        }
+        current_stage = None
+        current_analyst = None
 
         for page_number, text in transcript_dict.items():
-            if page_number < 3:  # Skip first two pages
+            if page_number < 3:
                 continue
-
             lines = text.split("\n")
             for line in lines:
                 match = self.speaker_pattern.match(line)
@@ -62,18 +69,47 @@ class ConferenceCallParser:
                     speaker = match.group("speaker").strip()
                     dialogue = match.group("dialogue").strip()
 
-                    if speaker not in dialogues:
-                        dialogues[speaker] = {"text": "", "pages": []}
+                    if speaker == "Moderator":
+                        intent = ClassifyModeratorIntent.process(dialogue)
 
-                    current_speaker = speaker
-                    dialogues[current_speaker]["text"] += " " + dialogue
-                    if page_number not in dialogues[current_speaker]["pages"]:
-                        dialogues[current_speaker]["pages"].append(page_number)
+                        if intent == "Opening":
+                            current_stage = "Commentary_and_Future_Outlook"
+                        elif intent == "Analyst Q&A Start":
+                            current_stage = "Management_Analyst"
 
-                elif (
-                    current_speaker and line.strip()
-                ):  # Continue dialogue for current speaker
-                    dialogues[current_speaker]["text"] += " " + line.strip()
+                            # Extract analyst name and company
+                            analyst_match = analyst_pattern.search(dialogue)
+                            if analyst_match:
+                                current_analyst = analyst_match.group("analyst")
+                                analyst_company = analyst_match.group("company")
+
+                                if (
+                                    current_analyst
+                                    not in dialogues["Management_Analyst"]
+                                ):
+                                    dialogues["Management_Analyst"][
+                                        current_analyst
+                                    ] = {
+                                        "company_name": analyst_company,
+                                        "dialogues": [],
+                                    }
+
+                        elif intent == "End":
+                            current_stage = "End"
+                            current_analyst = (
+                                None  # End stage, no analyst context
+                            )
+
+                    else:
+                        if (
+                            current_stage == "Management_Analyst"
+                            and current_analyst
+                        ):
+                            dialogues["Management_Analyst"][current_analyst][
+                                "dialogues"
+                            ].append(dialogue)
+                        elif current_stage:
+                            dialogues[current_stage].append(dialogue)
 
         return dialogues
 
@@ -90,21 +126,16 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
             company_name = parser.extract_company_name(text=text)
         elif page_number == 2:
             management_team = parser.extract_management_team(text=text)
+        else:
+            break
 
     print(f"Company Name: {company_name}")
-    # Create speakers list
-    speakers = ["Moderator"]
-    management_team_dict = json.loads(management_team)
-    speakers.extend(management_team_dict.keys())
+    print("Management Team:")
+    for name, designation in management_team.items():
+        print(f"Name: {name}, Designation: {designation}")
 
     # Extract dialogues
-    dialogues = parser.extract_dialogues(transcript_dict, speakers)
-
-    # Identify analysts and add them to the speaker list
-    identified_analysts = [
-        spk for spk in dialogues.keys() if spk not in speakers
-    ]
-    speakers.extend(identified_analysts)
+    dialogues = parser.extract_dialogues(transcript_dict)
 
     print(json.dumps(dialogues, indent=4))
 
