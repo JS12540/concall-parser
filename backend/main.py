@@ -9,12 +9,6 @@ from backend.agents.extract_management import ExtractManagement
 # Path to the uploaded PDF
 pdf_path = "d9791ed3-f139-4c06-8750-510adfa779eb.pdf"
 
-speaker_pattern = re.compile(r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)")
-analyst_pattern = re.compile(
-    r"The next question is from the line of (?P<analyst>.+?) from (?P<company>.+?)\."
-)  # noqa
-
-
 page_numbers = {}
 
 with pdfplumber.open(pdf_path) as pdf:
@@ -31,8 +25,10 @@ class ConferenceCallParser:
 
     def __init__(self):
         self.speaker_pattern = re.compile(
-            r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)"
+            r"(?P<speaker>[A-Za-z\s]+):\s*(?P<dialogue>(?:.*(?:\n(?![A-Za-z\s]+:).*)*)*)",
+            re.MULTILINE,
         )
+        self.current_analyst = None
 
     def clean_text(self, text: str) -> str:
         """Remove extra spaces, normalize case, and ensure consistency."""
@@ -47,69 +43,72 @@ class ConferenceCallParser:
     def extract_management_team(self, text) -> list[dict[str, str]]:
         """Extract management team members and their designations."""
         response = ExtractManagement.process(page_text=text)
+        response = json.loads(response)
         return response
 
     def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
         """Extract dialogues and classify stages."""
         dialogues = {
-            "Commentary_and_Future_Outlook": [],
-            "Management_Analyst": {},
-            "End": [],
+            "commentary_and_future_outlook": [],
+            "analyst_discussion": {},
+            "end": [],
         }
-        current_stage = None
-        current_analyst = None
 
         for page_number, text in transcript_dict.items():
             if page_number < 3:
                 continue
-            lines = text.split("\n")
-            for line in lines:
-                match = self.speaker_pattern.match(line)
-                if match:
-                    speaker = match.group("speaker").strip()
-                    dialogue = match.group("dialogue").strip()
 
-                    if speaker == "Moderator":
-                        intent = ClassifyModeratorIntent.process(dialogue)
-
-                        if intent == "Opening":
-                            current_stage = "Commentary_and_Future_Outlook"
-                        elif intent == "Analyst Q&A Start":
-                            current_stage = "Management_Analyst"
-
-                            # Extract analyst name and company
-                            analyst_match = analyst_pattern.search(dialogue)
-                            if analyst_match:
-                                current_analyst = analyst_match.group("analyst")
-                                analyst_company = analyst_match.group("company")
-
-                                if (
-                                    current_analyst
-                                    not in dialogues["Management_Analyst"]
-                                ):
-                                    dialogues["Management_Analyst"][
-                                        current_analyst
-                                    ] = {
-                                        "company_name": analyst_company,
-                                        "dialogues": [],
-                                    }
-
-                        elif intent == "End":
-                            current_stage = "End"
-                            current_analyst = (
-                                None  # End stage, no analyst context
-                            )
-
-                    else:
-                        if (
-                            current_stage == "Management_Analyst"
-                            and current_analyst
-                        ):
-                            dialogues["Management_Analyst"][current_analyst][
-                                "dialogues"
-                            ].append(dialogue)
-                        elif current_stage:
-                            dialogues[current_stage].append(dialogue)
+            matches = self.speaker_pattern.finditer(text)
+            for match in matches:
+                speaker = match.group("speaker").strip()
+                dialogue = match.group("dialogue")
+                print(f"Speaker: {speaker}, Dialogue: {dialogue}")
+                if speaker == "Moderator":
+                    print(
+                        "Moderator statement found, giving it for classification"
+                    )
+                    response = ClassifyModeratorIntent.process(
+                        dialogue=dialogue
+                    )
+                    response = json.loads(response)
+                    print(f"Response from Moderator classifier: {response}")
+                    intent = response["intent"]
+                    if intent == "new_analyst_start":
+                        analyst_name = response["analyst_name"]
+                        analyst_company = response["analyst_company"]
+                        self.current_analyst = analyst_name
+                        print(f"Current analyst set to: {self.current_analyst}")
+                        dialogues["analyst_discussion"][
+                            self.current_analyst
+                        ] = {"analyst_company": analyst_company, "dialogue": []}
+                    print(
+                        "Skiiping moderator statement as it is not needed anymore"
+                    )
+                    continue
+                if intent == "opening":
+                    dialogues["commentary_and_future_outlook"].append(
+                        {
+                            "speaker": speaker,
+                            "dialogue": self.clean_text(dialogue),
+                        }
+                    )
+                elif intent == "new_analyst_start":
+                    print(f"Analyst name: {self.current_analyst}")
+                    dialogues["analyst_discussion"][self.current_analyst][
+                        "dialogue"
+                    ].append(
+                        {
+                            "speaker": speaker,
+                            "dialogue": self.clean_text(dialogue),
+                        }
+                    )
+                elif intent == "end":
+                    dialogues["end"].append(
+                        {
+                            "speaker": speaker,
+                            "dialogue": self.clean_text(dialogue),
+                        }
+                    )
 
         return dialogues
 
