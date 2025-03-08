@@ -1,5 +1,5 @@
-from backend.constants import MODEL_NAME
-from backend.utils.get_groq_responses import get_groq_response
+from constants import MODEL_NAME
+from utils.get_groq_responses import get_groq_response
 
 CONTEXT = """
 You are an AI assistant designed to extract management information from text.

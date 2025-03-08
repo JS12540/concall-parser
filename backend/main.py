@@ -2,27 +2,22 @@ import json
 import re
 
 import pdfplumber
+from agents.extract_management import ExtractManagement
 
-from backend.agents.extract_management import ExtractManagement
-
-# Path to the uploaded PDF
-pdf_path = "d9791ed3-f139-4c06-8750-510adfa779eb.pdf"
+pdf_path = "skf_concall.pdf"
 
 speaker_pattern = re.compile(r"(?P<speaker>[A-Za-z\s]+):\s(?P<dialogue>.+)")
 
-page_numbers = {}
+page_text = {}
 
 with pdfplumber.open(pdf_path) as pdf:
     page_number = 1
     for page in pdf.pages:
         text = page.extract_text()
         if text:
-            page_numbers[page_number] = text
+            page_text[page_number] = text
             page_number += 1
 
-
-# TODO: extract to utils
-# TODO: temp text storage for testing, human verification
 
 class ConferenceCallParser:
     """Class to parse conference call transcript."""
@@ -114,4 +109,4 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
 # Example usage
 if __name__ == "__main__":
-    parse_conference_call(page_numbers)
+    parse_conference_call(page_text)
