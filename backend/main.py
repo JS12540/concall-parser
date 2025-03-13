@@ -38,7 +38,7 @@ class ConferenceCallParser:
         """Extract company name that appears after 'Yours faithfully'."""
         pattern = r"Yours faithfully,\s*For\s*(.*?)\s*_"
         match = re.search(pattern, text)
-        return match.group(1) if match else "Company name not found"
+        return match.group(1) if match else "Company name not found."
 
     def extract_management_team(self, text) -> list[dict[str, str]]:
         """Extract management team members and their designations."""
@@ -82,7 +82,7 @@ class ConferenceCallParser:
                             self.current_analyst
                         ] = {"analyst_company": analyst_company, "dialogue": []}
                     print(
-                        "Skiiping moderator statement as it is not needed anymore"
+                        "Skipping moderator statement as it is not needed anymore"
                     )
                     continue
                 if intent == "opening":
