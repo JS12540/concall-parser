@@ -29,6 +29,7 @@ class ConferenceCallParser:
             re.MULTILINE,
         )
         self.current_analyst = None
+        self.last_speaker = None
 
     def clean_text(self, text: str) -> str:
         """Remove extra spaces, normalize case, and ensure consistency."""
@@ -54,15 +55,43 @@ class ConferenceCallParser:
             "end": [],
         }
 
-        for page_number, text in transcript_dict.items():
-            if page_number < 3:
-                continue
+        for _, text in transcript_dict.items():
+            # Add leftover text before speaker pattern to last speaker
+            if self.last_speaker:
+                if self.last_speaker == "Moderator":
+                    print(
+                        "Skipping moderator statement as it is not needed anymore"
+                    )
+                else:
+                    first_speaker_match = self.speaker_pattern.search(text)
+                    if first_speaker_match:
+                        leftover_text = text[
+                            : first_speaker_match.start()
+                        ].strip()
+                        if leftover_text:
+                            # Append leftover text to the last speaker's dialogue
+                            print(
+                                f"Appending leftover text to {self.last_speaker}"
+                            )
+                            if self.current_analyst:
+                                dialogues["analyst_discussion"][
+                                    self.current_analyst
+                                ]["dialogue"][-1]["dialogue"] += (
+                                    " " + leftover_text
+                                )
+                            else:
+                                dialogues["commentary_and_future_outlook"][-1][
+                                    "dialogue"
+                                ] += " " + leftover_text
 
+            # Extract dialogues with proper handling across pages
             matches = self.speaker_pattern.finditer(text)
             for match in matches:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue")
                 print(f"Speaker: {speaker}, Dialogue: {dialogue}")
+                self.last_speaker = speaker  # Update last speaker
+
                 if speaker == "Moderator":
                     print(
                         "Moderator statement found, giving it for classification"
@@ -80,11 +109,15 @@ class ConferenceCallParser:
                         print(f"Current analyst set to: {self.current_analyst}")
                         dialogues["analyst_discussion"][
                             self.current_analyst
-                        ] = {"analyst_company": analyst_company, "dialogue": []}
+                        ] = {
+                            "analyst_company": analyst_company,
+                            "dialogue": [],
+                        }
                     print(
-                        "Skiiping moderator statement as it is not needed anymore"
+                        "Skipping moderator statement as it is not needed anymore"
                     )
                     continue
+
                 if intent == "opening":
                     dialogues["commentary_and_future_outlook"].append(
                         {
@@ -116,22 +149,26 @@ class ConferenceCallParser:
 def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
-    company_name = ""
     management_team = {}
-
+    extracted_text = ""
     # Extract company name and management team
     for page_number, text in transcript_dict.items():
         if page_number == 1:
-            company_name = parser.extract_company_name(text=text)
-        elif page_number == 2:
-            management_team = parser.extract_management_team(text=text)
-        else:
+            extracted_text += text
+            if "MANAGEMENT" in text:
+                print(f"Page number popped:{page_number}")
+                transcript_dict.pop(page_number)
+                break
+        if page_number == 2:
+            print(f"Page number popped:{page_number}")
+            extracted_text += text
+            transcript_dict.pop(1)
+            transcript_dict.pop(page_number)
             break
 
-    print(f"Company Name: {company_name}")
-    print("Management Team:")
-    for name, designation in management_team.items():
-        print(f"Name: {name}, Designation: {designation}")
+    management_team = parser.extract_management_team(text=extracted_text)
+
+    print(management_team)
 
     # Extract dialogues
     dialogues = parser.extract_dialogues(transcript_dict)
