@@ -59,30 +59,22 @@ class ConferenceCallParser:
             # Add leftover text before speaker pattern to last speaker
             if self.last_speaker:
                 if self.last_speaker == "Moderator":
-                    print(
-                        "Skipping moderator statement as it is not needed anymore"
-                    )
+                    print("Skipping moderator statement as it is not needed anymore")
                 else:
                     first_speaker_match = self.speaker_pattern.search(text)
                     if first_speaker_match:
-                        leftover_text = text[
-                            : first_speaker_match.start()
-                        ].strip()
+                        leftover_text = text[: first_speaker_match.start()].strip()
                         if leftover_text:
                             # Append leftover text to the last speaker's dialogue
-                            print(
-                                f"Appending leftover text to {self.last_speaker}"
-                            )
+                            print(f"Appending leftover text to {self.last_speaker}")
                             if self.current_analyst:
-                                dialogues["analyst_discussion"][
-                                    self.current_analyst
-                                ]["dialogue"][-1]["dialogue"] += (
-                                    " " + leftover_text
-                                )
+                                dialogues["analyst_discussion"][self.current_analyst][
+                                    "dialogue"
+                                ][-1]["dialogue"] += (" " + leftover_text)
                             else:
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += " " + leftover_text
+                                ] += (" " + leftover_text)
 
             # Extract dialogues with proper handling across pages
             matches = self.speaker_pattern.finditer(text)
@@ -93,12 +85,8 @@ class ConferenceCallParser:
                 self.last_speaker = speaker  # Update last speaker
 
                 if speaker == "Moderator":
-                    print(
-                        "Moderator statement found, giving it for classification"
-                    )
-                    response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue
-                    )
+                    print("Moderator statement found, giving it for classification")
+                    response = ClassifyModeratorIntent.process(dialogue=dialogue)
                     response = json.loads(response)
                     print(f"Response from Moderator classifier: {response}")
                     intent = response["intent"]
@@ -107,15 +95,11 @@ class ConferenceCallParser:
                         analyst_company = response["analyst_company"]
                         self.current_analyst = analyst_name
                         print(f"Current analyst set to: {self.current_analyst}")
-                        dialogues["analyst_discussion"][
-                            self.current_analyst
-                        ] = {
+                        dialogues["analyst_discussion"][self.current_analyst] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
-                    print(
-                        "Skipping moderator statement as it is not needed anymore"
-                    )
+                    print("Skipping moderator statement as it is not needed anymore")
                     continue
                 # ! error: intent referenced before assignment, did the assignment did not happen as
                 #  expected?
@@ -176,6 +160,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     dialogues = parser.extract_dialogues(transcript_dict)
 
     print(json.dumps(dialogues, indent=4))
+    return dialogues
 
 
 # Example usage

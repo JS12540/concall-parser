@@ -1,6 +1,6 @@
 import pdfplumber
 
-from .main import parse_conference_call
+from backend.main import parse_conference_call
 
 
 class ConferenceCallPipeline:
@@ -9,7 +9,7 @@ class ConferenceCallPipeline:
     def __init__(self) -> None:
         self.doc_text = {}
 
-    def get_document_text(self, document_path:str):
+    def get_document_text(self, document_path: str):
         """Get page number - page text mapping."""
         with pdfplumber.open(document_path) as pdf:
             page_number = 1
@@ -24,7 +24,7 @@ class ConferenceCallPipeline:
         dialogues = parse_conference_call(self.doc_text)
         return dialogues
 
-    def run_pipeline(self, document_path:str):
+    def run_pipeline(self, document_path: str):
         """Run the whole pipeline."""
         self.get_document_text(document_path)
         parsed_data = self.parse_text()
