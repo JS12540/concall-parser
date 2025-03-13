@@ -152,6 +152,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     parser = ConferenceCallParser()
     management_team = {}
     extracted_text = ""
+    extracted_text = ""
     # Extract company name and management team
     for page_number, text in transcript_dict.items():
         if page_number == 1:
