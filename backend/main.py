@@ -7,7 +7,7 @@ from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 
 # Path to the uploaded PDF
-pdf_path = "d9791ed3-f139-4c06-8750-510adfa779eb.pdf"
+pdf_path = "test_documents/skf_india.pdf"
 
 page_numbers = {}
 
