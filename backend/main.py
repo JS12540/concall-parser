@@ -85,6 +85,8 @@ class ConferenceCallParser:
                         "Skipping moderator statement as it is not needed anymore"
                     )
                     continue
+                # ! error: intent referenced before assignment, did the assignment did not happen as
+                #  expected?
                 if intent == "opening":
                     dialogues["commentary_and_future_outlook"].append(
                         {
