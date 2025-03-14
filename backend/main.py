@@ -7,7 +7,7 @@ from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 
 # Path to the uploaded PDF
-pdf_path = "test_documents/skf_india.pdf"
+pdf_path = r"test_documents\skf_india.pdf"
 
 page_numbers = {}
 
@@ -86,10 +86,25 @@ class ConferenceCallParser:
 
             # Extract dialogues with proper handling across pages
             matches = self.speaker_pattern.finditer(text)
+
+            if not any(self.speaker_pattern.finditer(text)) and text.strip():
+                # If no matches and text exists, append to the last speaker's dialogue
+                print(
+                    f"No speaker pattern found, appending text to {self.last_speaker}"
+                )
+                if self.current_analyst:
+                    dialogues["analyst_discussion"][self.current_analyst][
+                        "dialogue"
+                    ][-1]["dialogue"] += " " + self.clean_text(text)
+                else:
+                    dialogues["commentary_and_future_outlook"][-1][
+                        "dialogue"
+                    ] += " " + self.clean_text(text)
+
             for match in matches:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue")
-                print(f"Speaker: {speaker}, Dialogue: {dialogue}")
+                print(f"Speaker found: {speaker}")
                 self.last_speaker = speaker  # Update last speaker
 
                 if speaker == "Moderator":
