@@ -7,7 +7,7 @@ from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 
 # Path to the uploaded PDF
-pdf_path = r"test_documents\skf_india.pdf"
+pdf_path = r"test_documents\reliance.pdf"
 
 page_numbers = {}
 
@@ -161,6 +161,29 @@ class ConferenceCallParser:
         return dialogues
 
 
+def extract_management_team_from_text(text: str, management_team: dict) -> dict:
+    """Extract management dialogues from text until the next speaker."""
+    extracted_dialogues = {}  # To store extracted dialogues
+
+    # Create regex pattern to find each management member
+    management_pattern = (
+        r"("
+        + "|".join(re.escape(name) for name in management_team.keys())
+        + r")(.*?)(?=(?:"
+        + "|".join(re.escape(name) for name in management_team.keys())
+        + r")|$)"
+    )
+
+    matches = re.finditer(management_pattern, text, re.DOTALL)
+
+    for match in matches:
+        speaker = match.group(1)
+        dialogue = match.group(2).strip()
+        extracted_dialogues[speaker] = dialogue
+
+    return extracted_dialogues
+
+
 def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
@@ -185,8 +208,19 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     print(management_team)
 
-    # Extract dialogues
-    dialogues = parser.extract_dialogues(transcript_dict)
+    # Check if moderator exists
+    moderator_found = any(
+        "Moderator:" in text for text in transcript_dict.values()
+    )
+
+    if moderator_found:
+        # Extract dialogues
+        dialogues = parser.extract_dialogues(transcript_dict)
+    else:
+        print("No moderator found, extracting management team from text")
+        dialogues = extract_management_team_from_text(
+            " ".join(transcript_dict.values()), management_team
+        )
 
     print(json.dumps(dialogues, indent=4))
 
