@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import sys
 
 import pdfplumber
 
@@ -7,8 +9,10 @@ from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 # Path to the uploaded PDF
-pdf_path = r"test_documents\reliance.pdf"
+pdf_path = r"test_documents/info_edge.pdf"
 
 transcript = {}
 
@@ -262,8 +266,18 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         )
 
     logger.info(json.dumps(dialogues, indent=4))
+    return dialogues
 
 
-# Example usage
+def save_output(dialogues, output_base_path, document_name):
+    """Save dialogues to JSON files in the specified output path."""
+    for dialogue_type, dialogue in dialogues.items():
+        output_dir_path = os.path.join(output_base_path, document_name)
+        os.makedirs(output_dir_path, exist_ok=True)
+        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
+            json.dump(dialogue, file, indent=4)
+
+
 if __name__ == "__main__":
-    parse_conference_call(transcript)
+    dialogues = parse_conference_call(transcript)
+    save_output(dialogues, "output", "info_edge")
