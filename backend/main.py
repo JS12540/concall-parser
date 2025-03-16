@@ -5,6 +5,7 @@ import pdfplumber
 
 from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
+from backend.log_config import logger
 
 # Path to the uploaded PDF
 pdf_path = r"test_documents\reliance.pdf"
@@ -12,14 +13,17 @@ pdf_path = r"test_documents\reliance.pdf"
 transcript = {}
 
 # no need of page number dict, iterate over pages list, use page[i].page_number to get page number
-with pdfplumber.open(pdf_path) as pdf:
-    page_number = 1
-    for page in pdf.pages:
-        text = page.extract_text()
-        if text:
-            transcript[page_number] = text
-            page_number += 1
-
+try:
+    with pdfplumber.open(pdf_path) as pdf:
+        logger.debug('Loaded document')
+        page_number = 1
+        for page in pdf.pages:
+            text = page.extract_text()
+            if text:
+                transcript[page_number] = text
+                page_number += 1
+except Exception:
+    logger.exception("Could not load file")
 
 class ConferenceCallParser:
     """Class to parse conference call transcript."""
@@ -52,9 +56,14 @@ class ConferenceCallParser:
         Handles case where names of all management personnel participating in 
         call are present on one page.
         """
-        response = ExtractManagement.process(page_text=text)
-        response = json.loads(response)
-        return response
+        # ! possible issue with type hints in ExtractManagement, need to verify
+        try:
+            response = ExtractManagement.process(page_text=text)
+            response = json.loads(response)
+            return response
+        except Exception:
+            logger.exception("Could not extract management from text")
+            return None
 
     def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
         """Extract dialogues and classify stages."""
@@ -70,7 +79,7 @@ class ConferenceCallParser:
             # If not first page of concall
             if self.last_speaker:
                 if self.last_speaker == "Moderator":
-                    print(
+                    logger.debug(
                         "Skipping moderator statement as it is not needed anymore."
                     )
                 else:
@@ -82,7 +91,7 @@ class ConferenceCallParser:
                         ].strip()
                         if leftover_text:
                             # Append leftover text (speech) to the last speaker's dialogue
-                            print(
+                            logger.debug(
                                 f"Appending leftover text to {self.last_speaker}"
                             )
                             # TODO: refer to actual data to create model, example
@@ -106,7 +115,7 @@ class ConferenceCallParser:
                 # If no matches and text exists, append to the last speaker's dialogue
                 # this happens when previous speaker (last speaker on previous page) is
                 # the only one talking here, it is continuation of speech started on previous page
-                print(
+                logger.debug(
                     f"No speaker pattern found, appending text to {self.last_speaker}"
                 )
                 if self.current_analyst:
@@ -122,32 +131,32 @@ class ConferenceCallParser:
             for match in matches:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue")
-                print(f"Speaker found: {speaker}")
+                logger.debug(f"Speaker found: {speaker}")
                 self.last_speaker = speaker  # Update last speaker
 
                 if speaker == "Moderator":
-                    print(
+                    logger.debug(
                         "Moderator statement found, giving it for classification"
                     )
                     response = ClassifyModeratorIntent.process(
                         dialogue=dialogue
                     )
                     response = json.loads(response)
-                    print(f"\nResponse from Moderator classifier: {response}")
+                    logger.info(f"Response from Moderator classifier: {response}")
                     intent = response["intent"]
                     if intent == "new_analyst_start":
                         analyst_name = response["analyst_name"]
                         analyst_company = response["analyst_company"]
                         self.current_analyst = analyst_name
-                        print(f"Current analyst set to: {self.current_analyst}")
+                        logger.debug(f"Current analyst set to: {self.current_analyst}")
                         dialogues["analyst_discussion"][
                             self.current_analyst
                         ] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
-                    print(
-                        "Skipping moderator statement as it is not needed anymore"
+                    logger.debug(
+                        "Skipping moderator statement as it is not needed anymore."
                     )
                     continue
 
@@ -161,7 +170,7 @@ class ConferenceCallParser:
                         }
                     )
                 elif intent == "new_analyst_start":
-                    print(f"Analyst name: {self.current_analyst}")
+                    logger.debug(f"Analyst name: {self.current_analyst}")
                     dialogues["analyst_discussion"][self.current_analyst][
                         "dialogue"
                     ].append(
@@ -185,8 +194,9 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     """Extract management dialogues from text until the next speaker."""
     extracted_dialogues = {}  # To store extracted dialogues
 
-    # Create regex pattern to find each management member
-    # TODO: explain what this regex pattern matches, with examples
+    # Create regex pattern to find each management member and what they spoke
+    # extracts all management name and speech pairs in a given text
+    # ? but what if some other guy talks in between? is this handled beforehand?
     management_pattern = (
         r"("
         + "|".join(re.escape(name) for name in management_team.keys())
@@ -217,12 +227,15 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     for page_number, text in transcript_dict.items():
         if page_number == 1:
             extracted_text += text
+            # generalize for pages 1 and 2?
             if "MANAGEMENT" in text:
-                print(f"Page number popped:{page_number}")
+                # If first page contains management info, remove from doc, parse it
+                logger.debug(f"Page number popped:{page_number}")
                 transcript_dict.pop(page_number)
                 break
         if page_number == 2:
-            print(f"Page number popped:{page_number}")
+            # add check for management here, if not present, assume reliance case
+            logger.debug(f"Page number popped:{page_number}")
             extracted_text += text
             transcript_dict.pop(1)
             transcript_dict.pop(page_number)
@@ -230,7 +243,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     management_team = parser.extract_management_team(text=extracted_text)
 
-    print(management_team)
+    logger.debug(management_team)
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
@@ -242,12 +255,13 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         # Extract dialogues
         dialogues = parser.extract_dialogues(transcript_dict)
     else:
-        print("No moderator found, extracting management team from text")
+        # ?why do we do things differently if the moderator is not present?
+        logger.debug("No moderator found, extracting management team from text")
         dialogues = extract_management_team_from_text(
             " ".join(transcript_dict.values()), management_team
         )
 
-    print(json.dumps(dialogues, indent=4))
+    logger.info(json.dumps(dialogues, indent=4))
 
 
 # Example usage
