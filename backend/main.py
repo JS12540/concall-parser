@@ -11,23 +11,46 @@ from backend.log_config import logger
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-# Path to the uploaded PDF
-pdf_path = r"test_documents/info_edge.pdf"
 
-transcript = {}
+def save_extracted_text(
+    transcript: dict, document_name: str, output_base_path: str = "raw_transcript"
+):
+    """Save the extracted text to a file."""
+    output_dir_path = os.path.join(output_base_path, document_name)
+    os.makedirs(output_base_path, exist_ok=True)
+    with open(f"{output_dir_path, }.txt", "w") as file:
+        for _, text in transcript.items():
+            file.write(text)
+            file.write("\n\n")
+    logger.info("Saved transcript text to file\n")
 
-# no need of page number dict, iterate over pages list, use page[i].page_number to get page number
-try:
-    with pdfplumber.open(pdf_path) as pdf:
-        logger.debug('Loaded document')
-        page_number = 1
-        for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                transcript[page_number] = text
-                page_number += 1
-except Exception:
-    logger.exception("Could not load file")
+
+def get_document_transcript(filepath: str):
+    """Creates a text transcript of the given pdf document."""
+    transcript = {}
+    try:
+        with pdfplumber.open(filepath) as pdf:
+            logger.debug("Loaded document")
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    # remove newlines, present throughout transcript
+                    cleaned_text = re.sub(r"\n", " ", text)
+                    transcript[page.page_number + 1] = cleaned_text
+        return transcript
+    except Exception:
+        logger.exception("Could not load file %s", filepath)
+
+
+def test_documents(test_dir_path: str):
+    """Test all documents in a directory for concall parsing."""
+    for path in os.listdir(test_dir_path):
+        logger.info("Testing %s \n", path)
+        transcript = get_document_transcript(path)
+        save_extracted_text(transcript, os.path.basename(path), "raw_transcript")
+        dialogues = parse_conference_call(transcript_dict=transcript)
+        save_output(dialogues, "output", os.path.basename(path))
+
 
 class ConferenceCallParser:
     """Class to parse conference call transcript."""
@@ -46,8 +69,8 @@ class ConferenceCallParser:
 
     def extract_company_name(self, text: str) -> str:
         """Extract company name that appears after 'Yours faithfully'.
-        
-        This handles the case where an email is present on the first page of 
+
+        This handles the case where an email is present on the first page of
         the pdf, so the input text should be of the first page.
         """
         pattern = r"Yours faithfully,\s*For\s*(.*?)\s*_"
@@ -56,8 +79,8 @@ class ConferenceCallParser:
 
     def extract_management_team(self, text) -> list[dict[str, str]]:
         """Extract management team members and their designations.
-        
-        Handles case where names of all management personnel participating in 
+
+        Handles case where names of all management personnel participating in
         call are present on one page.
         """
         # ! possible issue with type hints in ExtractManagement, need to verify
@@ -90,9 +113,7 @@ class ConferenceCallParser:
                     # analyst or management, get their name
                     first_speaker_match = self.speaker_pattern.search(text)
                     if first_speaker_match:
-                        leftover_text = text[
-                            : first_speaker_match.start()
-                        ].strip()
+                        leftover_text = text[: first_speaker_match.start()].strip()
                         if leftover_text:
                             # Append leftover text (speech) to the last speaker's dialogue
                             logger.debug(
@@ -100,15 +121,13 @@ class ConferenceCallParser:
                             )
                             # TODO: refer to actual data to create model, example
                             if self.current_analyst:
-                                dialogues["analyst_discussion"][
-                                    self.current_analyst
-                                ]["dialogue"][-1]["dialogue"] += (
-                                    " " + leftover_text
-                                )
+                                dialogues["analyst_discussion"][self.current_analyst][
+                                    "dialogue"
+                                ][-1]["dialogue"] += (" " + leftover_text)
                             else:
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += " " + leftover_text
+                                ] += (" " + leftover_text)
 
             # Extract all speakers in that page
             matches = self.speaker_pattern.finditer(text)
@@ -123,9 +142,9 @@ class ConferenceCallParser:
                     f"No speaker pattern found, appending text to {self.last_speaker}"
                 )
                 if self.current_analyst:
-                    dialogues["analyst_discussion"][self.current_analyst][
-                        "dialogue"
-                    ][-1]["dialogue"] += " " + self.clean_text(text)
+                    dialogues["analyst_discussion"][self.current_analyst]["dialogue"][
+                        -1
+                    ]["dialogue"] += " " + self.clean_text(text)
                 else:
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
@@ -142,9 +161,7 @@ class ConferenceCallParser:
                     logger.debug(
                         "Moderator statement found, giving it for classification"
                     )
-                    response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue
-                    )
+                    response = ClassifyModeratorIntent.process(dialogue=dialogue)
                     response = json.loads(response)
                     logger.info(f"Response from Moderator classifier: {response}")
                     intent = response["intent"]
@@ -153,9 +170,7 @@ class ConferenceCallParser:
                         analyst_company = response["analyst_company"]
                         self.current_analyst = analyst_name
                         logger.debug(f"Current analyst set to: {self.current_analyst}")
-                        dialogues["analyst_discussion"][
-                            self.current_analyst
-                        ] = {
+                        dialogues["analyst_discussion"][self.current_analyst] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
@@ -164,7 +179,7 @@ class ConferenceCallParser:
                     )
                     continue
 
-                # ? why would intent have a reference before assignment error, 
+                # ? why would intent have a reference before assignment error,
                 # what is the text in this case
                 if intent == "opening":
                     dialogues["commentary_and_future_outlook"].append(
@@ -226,7 +241,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     management_team = {}
     extracted_text = ""
     # Extract company name and management team
-    # TODO: need to add an extra if in page 2, 
+    # TODO: need to add an extra if in page 2,
     # else case should handle case like reliance (no names given)
     for page_number, text in transcript_dict.items():
         if page_number == 1:
@@ -251,9 +266,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
-    moderator_found = any(
-        "Moderator:" in text for text in transcript_dict.values()
-    )
+    moderator_found = any("Moderator:" in text for text in transcript_dict.values())
 
     if moderator_found:
         # Extract dialogues
@@ -279,5 +292,4 @@ def save_output(dialogues, output_base_path, document_name):
 
 
 if __name__ == "__main__":
-    dialogues = parse_conference_call(transcript)
-    save_output(dialogues, "output", "info_edge")
+    test_documents(test_dir_path="test_documents/")
