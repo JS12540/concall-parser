@@ -18,7 +18,7 @@ def save_extracted_text(
     """Save the extracted text to a file."""
     output_dir_path = os.path.join(output_base_path, document_name)
     os.makedirs(output_base_path, exist_ok=True)
-    with open(f"{output_dir_path, }.txt", "w") as file:
+    with open(f"{output_dir_path}.txt", "w") as file:
         for _, text in transcript.items():
             file.write(text)
             file.write("\n\n")
@@ -31,12 +31,14 @@ def get_document_transcript(filepath: str):
     try:
         with pdfplumber.open(filepath) as pdf:
             logger.debug("Loaded document")
+            page_number = 1
             for page in pdf.pages:
                 text = page.extract_text()
                 if text:
                     # remove newlines, present throughout transcript
                     cleaned_text = re.sub(r"\n", " ", text)
-                    transcript[page.page_number + 1] = cleaned_text
+                    transcript[page_number] = cleaned_text
+                    page_number += 1
         return transcript
     except Exception:
         logger.exception("Could not load file %s", filepath)
@@ -46,7 +48,7 @@ def test_documents(test_dir_path: str):
     """Test all documents in a directory for concall parsing."""
     for path in os.listdir(test_dir_path):
         logger.info("Testing %s \n", path)
-        transcript = get_document_transcript(path)
+        transcript = get_document_transcript(os.path.join(test_dir_path, path))
         save_extracted_text(transcript, os.path.basename(path), "raw_transcript")
         dialogues = parse_conference_call(transcript_dict=transcript)
         save_output(dialogues, "output", os.path.basename(path))
