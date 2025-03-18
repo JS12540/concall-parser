@@ -12,6 +12,7 @@ from backend.log_config import logger
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 ERROR_CURSOR_FILE = "failed_files.json"
 
+
 def save_extracted_text(
     transcript: dict, document_name: str, output_base_path: str = "raw_transcript"
 ):
@@ -44,7 +45,7 @@ def get_document_transcript(filepath: str):
         logger.exception("Could not load file %s", filepath)
 
 
-def test_documents(test_dir_path: str, test_all:bool=False):
+def test_documents(test_dir_path: str, test_all: bool = False):
     """Test all documents in a directory for concall parsing."""
     if os.path.exists(ERROR_CURSOR_FILE):
         with open(ERROR_CURSOR_FILE) as file:
@@ -54,7 +55,7 @@ def test_documents(test_dir_path: str, test_all:bool=False):
         files_to_test = error_files
     else:
         files_to_test = set(os.listdir(test_dir_path))
-    
+
     for path in files_to_test:
         try:
             filepath = os.path.join(test_dir_path, path)
@@ -65,12 +66,15 @@ def test_documents(test_dir_path: str, test_all:bool=False):
 
             dialogues = parse_conference_call(transcript_dict=transcript)
             save_output(dialogues, "output", os.path.basename(path))
-        
+
         except Exception:
             error_files.add(path)
-            logger.exception("Error while processing file %s", )
-    
-    with open(ERROR_CURSOR_FILE, 'w') as file:
+            logger.exception(
+                "Error while processing file %s",
+            )
+            continue
+
+    with open(ERROR_CURSOR_FILE, "w") as file:
         json.dump(list(error_files), file)
 
 
@@ -300,7 +304,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
             " ".join(transcript_dict.values()), management_team
         )
 
-    logger.info(json.dumps(dialogues, indent=4))
+    logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
 
 
@@ -314,4 +318,4 @@ def save_output(dialogues, output_base_path, document_name):
 
 
 if __name__ == "__main__":
-    test_documents(test_dir_path="test_documents/")
+    test_documents(test_dir_path="test_documents/", test_all=True)
