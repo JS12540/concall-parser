@@ -10,7 +10,7 @@ from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
+ERROR_CURSOR_FILE = "failed_files.json"
 
 def save_extracted_text(
     transcript: dict, document_name: str, output_base_path: str = "raw_transcript"
@@ -44,14 +44,34 @@ def get_document_transcript(filepath: str):
         logger.exception("Could not load file %s", filepath)
 
 
-def test_documents(test_dir_path: str):
+def test_documents(test_dir_path: str, test_all:bool=False):
     """Test all documents in a directory for concall parsing."""
-    for path in os.listdir(test_dir_path):
-        logger.info("Testing %s \n", path)
-        transcript = get_document_transcript(os.path.join(test_dir_path, path))
-        save_extracted_text(transcript, os.path.basename(path), "raw_transcript")
-        dialogues = parse_conference_call(transcript_dict=transcript)
-        save_output(dialogues, "output", os.path.basename(path))
+    if os.path.exists(ERROR_CURSOR_FILE):
+        with open(ERROR_CURSOR_FILE) as file:
+            error_files = set(json.load(file))
+
+    if not test_all:
+        files_to_test = error_files
+    else:
+        files_to_test = set(os.listdir(test_dir_path))
+    
+    for path in files_to_test:
+        try:
+            filepath = os.path.join(test_dir_path, path)
+            logger.info("Testing %s \n", path)
+
+            transcript = get_document_transcript(filepath)
+            save_extracted_text(transcript, path, "raw_transcript")
+
+            dialogues = parse_conference_call(transcript_dict=transcript)
+            save_output(dialogues, "output", os.path.basename(path))
+        
+        except Exception:
+            error_files.add(path)
+            logger.exception("Error while processing file %s", )
+    
+    with open(ERROR_CURSOR_FILE, 'w') as file:
+        json.dump(list(error_files), file)
 
 
 class ConferenceCallParser:
