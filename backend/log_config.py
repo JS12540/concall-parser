@@ -4,7 +4,7 @@ logger = logging.Logger("concall_logger")
 logger.setLevel(logging.DEBUG)
 
 stream_handler = logging.StreamHandler()
-file_handler = logging.FileHandler(filename="logs/app.log")
+file_handler = logging.FileHandler(filename="logs/app.log", mode='w')
 
 formatter = logging.Formatter(
     fmt="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
