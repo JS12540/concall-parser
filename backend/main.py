@@ -1,81 +1,11 @@
 import json
-import os
 import re
-import sys
 
-import pdfplumber
+from tests.test_parsing import test_documents
 
 from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-ERROR_CURSOR_FILE = "failed_files.json"
-
-
-def save_extracted_text(
-    transcript: dict, document_name: str, output_base_path: str = "raw_transcript"
-):
-    """Save the extracted text to a file."""
-    output_dir_path = os.path.join(output_base_path, document_name)
-    os.makedirs(output_base_path, exist_ok=True)
-    with open(f"{output_dir_path}.txt", "w") as file:
-        for _, text in transcript.items():
-            file.write(text)
-            file.write("\n\n")
-    logger.info("Saved transcript text to file\n")
-
-
-def get_document_transcript(filepath: str):
-    """Creates a text transcript of the given pdf document."""
-    transcript = {}
-    try:
-        with pdfplumber.open(filepath) as pdf:
-            logger.debug("Loaded document")
-            page_number = 1
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    # remove newlines, present throughout transcript
-                    cleaned_text = re.sub(r"\n", " ", text)
-                    transcript[page_number] = cleaned_text
-                    page_number += 1
-        return transcript
-    except Exception:
-        logger.exception("Could not load file %s", filepath)
-
-
-def test_documents(test_dir_path: str, test_all: bool = False):
-    """Test all documents in a directory for concall parsing."""
-    if os.path.exists(ERROR_CURSOR_FILE):
-        with open(ERROR_CURSOR_FILE) as file:
-            error_files = set(json.load(file))
-
-    if not test_all:
-        files_to_test = error_files
-    else:
-        files_to_test = set(os.listdir(test_dir_path))
-
-    for path in files_to_test:
-        try:
-            filepath = os.path.join(test_dir_path, path)
-            logger.info("Testing %s \n", path)
-
-            transcript = get_document_transcript(filepath)
-            save_extracted_text(transcript, path, "raw_transcript")
-
-            dialogues = parse_conference_call(transcript_dict=transcript)
-            save_output(dialogues, "output", os.path.basename(path))
-
-        except Exception:
-            error_files.add(path)
-            logger.exception(
-                "Error while processing file %s",
-            )
-            continue
-
-    with open(ERROR_CURSOR_FILE, "w") as file:
-        json.dump(list(error_files), file)
 
 
 class ConferenceCallParser:
@@ -306,15 +236,6 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
-
-
-def save_output(dialogues, output_base_path, document_name):
-    """Save dialogues to JSON files in the specified output path."""
-    for dialogue_type, dialogue in dialogues.items():
-        output_dir_path = os.path.join(output_base_path, document_name)
-        os.makedirs(output_dir_path, exist_ok=True)
-        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
-            json.dump(dialogue, file, indent=4)
 
 
 if __name__ == "__main__":
