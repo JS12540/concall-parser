@@ -1,11 +1,10 @@
 import json
 import re
 
-from tests.test_parsing import test_documents
-
 from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
+from backend.tests.test_parsing import get_document_transcript
 
 
 class ConferenceCallParser:
@@ -69,7 +68,9 @@ class ConferenceCallParser:
                     # analyst or management, get their name
                     first_speaker_match = self.speaker_pattern.search(text)
                     if first_speaker_match:
-                        leftover_text = text[: first_speaker_match.start()].strip()
+                        leftover_text = text[
+                            : first_speaker_match.start()
+                        ].strip()
                         if leftover_text:
                             # Append leftover text (speech) to the last speaker's dialogue
                             logger.debug(
@@ -77,13 +78,15 @@ class ConferenceCallParser:
                             )
                             # TODO: refer to actual data to create model, example
                             if self.current_analyst:
-                                dialogues["analyst_discussion"][self.current_analyst][
-                                    "dialogue"
-                                ][-1]["dialogue"] += (" " + leftover_text)
+                                dialogues["analyst_discussion"][
+                                    self.current_analyst
+                                ]["dialogue"][-1]["dialogue"] += (
+                                    " " + leftover_text
+                                )
                             else:
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += (" " + leftover_text)
+                                ] += " " + leftover_text
 
             # Extract all speakers in that page
             matches = self.speaker_pattern.finditer(text)
@@ -98,9 +101,9 @@ class ConferenceCallParser:
                     f"No speaker pattern found, appending text to {self.last_speaker}"
                 )
                 if self.current_analyst:
-                    dialogues["analyst_discussion"][self.current_analyst]["dialogue"][
-                        -1
-                    ]["dialogue"] += " " + self.clean_text(text)
+                    dialogues["analyst_discussion"][self.current_analyst][
+                        "dialogue"
+                    ][-1]["dialogue"] += " " + self.clean_text(text)
                 else:
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
@@ -117,16 +120,24 @@ class ConferenceCallParser:
                     logger.debug(
                         "Moderator statement found, giving it for classification"
                     )
-                    response = ClassifyModeratorIntent.process(dialogue=dialogue)
+                    response = ClassifyModeratorIntent.process(
+                        dialogue=dialogue
+                    )
                     response = json.loads(response)
-                    logger.info(f"Response from Moderator classifier: {response}")
+                    logger.info(
+                        f"Response from Moderator classifier: {response}"
+                    )
                     intent = response["intent"]
                     if intent == "new_analyst_start":
                         analyst_name = response["analyst_name"]
                         analyst_company = response["analyst_company"]
                         self.current_analyst = analyst_name
-                        logger.debug(f"Current analyst set to: {self.current_analyst}")
-                        dialogues["analyst_discussion"][self.current_analyst] = {
+                        logger.debug(
+                            f"Current analyst set to: {self.current_analyst}"
+                        )
+                        dialogues["analyst_discussion"][
+                            self.current_analyst
+                        ] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
@@ -222,7 +233,9 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
-    moderator_found = any("Moderator:" in text for text in transcript_dict.values())
+    moderator_found = any(
+        "Moderator:" in text for text in transcript_dict.values()
+    )
 
     if moderator_found:
         # Extract dialogues
@@ -239,4 +252,9 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
 
 if __name__ == "__main__":
-    test_documents(test_dir_path="test_documents/", test_all=True)
+    transcript = get_document_transcript(
+        filepath=r"test_documents\Adani_total_gas.pdf"
+    )
+
+    dialogues = parse_conference_call(transcript_dict=transcript)
+    print(dialogues, indent=4)
