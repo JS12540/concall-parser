@@ -4,7 +4,11 @@ import re
 from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
+from backend.management_fix_no_names import handle_only_management_case
 from backend.tests.test_parsing import get_document_transcript
+
+# TODO: Need examples of dialogues extracted to make sense of things.
+# Need to add more logs for this.
 
 
 class ConferenceCallParser:
@@ -36,7 +40,7 @@ class ConferenceCallParser:
         """Extract management team members and their designations.
 
         Handles case where names of all management personnel participating in
-        call are present on one page.
+        call are present on one page using the ExtractManagement agent.
         """
         # ! possible issue with type hints in ExtractManagement, need to verify
         try:
@@ -55,7 +59,6 @@ class ConferenceCallParser:
             "end": [],
         }
 
-        # iterate over pages
         for _, text in transcript_dict.items():
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
@@ -68,9 +71,7 @@ class ConferenceCallParser:
                     # analyst or management, get their name
                     first_speaker_match = self.speaker_pattern.search(text)
                     if first_speaker_match:
-                        leftover_text = text[
-                            : first_speaker_match.start()
-                        ].strip()
+                        leftover_text = text[: first_speaker_match.start()].strip()
                         if leftover_text:
                             # Append leftover text (speech) to the last speaker's dialogue
                             logger.debug(
@@ -78,15 +79,13 @@ class ConferenceCallParser:
                             )
                             # TODO: refer to actual data to create model, example
                             if self.current_analyst:
-                                dialogues["analyst_discussion"][
-                                    self.current_analyst
-                                ]["dialogue"][-1]["dialogue"] += (
-                                    " " + leftover_text
-                                )
+                                dialogues["analyst_discussion"][self.current_analyst][
+                                    "dialogue"
+                                ][-1]["dialogue"] += (" " + leftover_text)
                             else:
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += " " + leftover_text
+                                ] += (" " + leftover_text)
 
             # Extract all speakers in that page
             matches = self.speaker_pattern.finditer(text)
@@ -101,9 +100,9 @@ class ConferenceCallParser:
                     f"No speaker pattern found, appending text to {self.last_speaker}"
                 )
                 if self.current_analyst:
-                    dialogues["analyst_discussion"][self.current_analyst][
-                        "dialogue"
-                    ][-1]["dialogue"] += " " + self.clean_text(text)
+                    dialogues["analyst_discussion"][self.current_analyst]["dialogue"][
+                        -1
+                    ]["dialogue"] += " " + self.clean_text(text)
                 else:
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
@@ -120,24 +119,16 @@ class ConferenceCallParser:
                     logger.debug(
                         "Moderator statement found, giving it for classification"
                     )
-                    response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue
-                    )
+                    response = ClassifyModeratorIntent.process(dialogue=dialogue)
                     response = json.loads(response)
-                    logger.info(
-                        f"Response from Moderator classifier: {response}"
-                    )
+                    logger.info(f"Response from Moderator classifier: {response}")
                     intent = response["intent"]
                     if intent == "new_analyst_start":
                         analyst_name = response["analyst_name"]
                         analyst_company = response["analyst_company"]
                         self.current_analyst = analyst_name
-                        logger.debug(
-                            f"Current analyst set to: {self.current_analyst}"
-                        )
-                        dialogues["analyst_discussion"][
-                            self.current_analyst
-                        ] = {
+                        logger.debug(f"Current analyst set to: {self.current_analyst}")
+                        dialogues["analyst_discussion"][self.current_analyst] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
@@ -236,9 +227,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
-    moderator_found = any(
-        "Moderator:" in text for text in transcript_dict.values()
-    )
+    moderator_found = any("Moderator:" in text for text in transcript_dict.values())
 
     if moderator_found:
         # Extract dialogues
@@ -254,10 +243,45 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     return dialogues
 
 
+def find_management_names(transcript: dict[int, str], parser: ConferenceCallParser):
+    """Checks if the names of management team are present in the text or not.
+
+    Checks the first three pages if they contain the management team, if not,
+    assume apollo case and extract all speakers.
+
+    Passes the page containing name of management back in the first case, names
+    of all speakers in the apollo case.
+
+    Args:
+        transcript: The page number, page text pair dict extracted from the document.
+        parser: ConferenceCallParser object required for text extraction.
+
+    Returns:
+        speaker_names: A list of speaker names extracted for the apollo case.
+    """
+    # ? Shouldn't the text we send to the agent just be of the page the
+    # management names are on? Why are we saving all in extracted_text?
+    extracted_text = ""
+    management_found_page = 0
+
+    for page_number, text in transcript.items():
+        extracted_text += text
+        if "Management" in text or "Participant" in text:
+            management_found_page = page_number
+            logger.debug("Found management on page %s", management_found_page)
+            # TODO: pop till this page number, irrelevant details
+            break
+
+    if management_found_page == 0:
+        speech_pair = handle_only_management_case(transcript=transcript)
+        speaker_names = parser.extract_management_team(speakers=speech_pair.keys())
+        return speaker_names
+
+    speaker_names = parser.extract_management_team(text=extracted_text)
+
+
 if __name__ == "__main__":
-    transcript = get_document_transcript(
-        filepath=r"test_documents\ambuja_cement.pdf"
-    )
+    transcript = get_document_transcript(filepath=r"test_documents/ambuja_cement.pdf")
 
     dialogues = parse_conference_call(transcript_dict=transcript)
     print(dialogues, indent=4)

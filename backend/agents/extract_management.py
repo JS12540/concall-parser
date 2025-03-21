@@ -1,6 +1,8 @@
 from backend.constants import MODEL_NAME
 from backend.utils.get_groq_responses import get_groq_response
 
+# TODO: add second prompt case, for apollo (may be solved using regex but idk)
+
 CONTEXT = """
 You are an AI assistant designed to extract management information and company name from text.
 Given page text, identify the names of management personnel and their corresponding designations.
@@ -35,7 +37,7 @@ class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
     @staticmethod
-    def process(page_text):
+    def process(page_text: str) -> str | None:
         """Process the given page text to extract relevant management information.
 
         Args:

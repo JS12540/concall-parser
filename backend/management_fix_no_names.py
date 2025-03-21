@@ -13,11 +13,11 @@ def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[st
     """Extracts speaker names and their corresponding speeches from the transcript.
 
     Args:
-        transcript (dict[str, str]): A dictionary where keys are page numbers (as strings) and 
+        transcript: A dictionary where keys are page numbers (as strings) and 
             values are extracted text.
 
     Returns:
-        dict[str, list[str]]: A dictionary mapping speaker names to a list of their spoken segments.
+        speech_pair: A dictionary mapping speaker names to a list of their spoken segments.
     """
     all_speakers = set()
     speech_pair: dict[str, list[str]] = {}
@@ -47,7 +47,7 @@ def test_handle_only_management_case(filepath: str):
     """Tests the extraction function using a provided PDF file.
 
     Args:
-        filepath (str): Path to the PDF file containing the transcript.
+        filepath: Path to the PDF file containing the transcript.
     """
     transcript: dict[str, str] = {}
 
