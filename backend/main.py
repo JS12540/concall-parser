@@ -221,11 +221,14 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
                 break
         if page_number == 2:
             # add check for management here, if not present, assume reliance case
-            logger.debug(f"Page number popped:{page_number}")
-            extracted_text += text
-            transcript_dict.pop(1)
-            transcript_dict.pop(page_number)
-            break
+            if "MANAGEMENT" in text:
+                logger.debug(f"Page number popped:{page_number}")
+                extracted_text += text
+                transcript_dict.pop(1)
+                transcript_dict.pop(page_number)
+                break
+            else:
+                break
 
     management_team = parser.extract_management_team(text=extracted_text)
 
@@ -253,7 +256,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
 if __name__ == "__main__":
     transcript = get_document_transcript(
-        filepath=r"test_documents\Adani_total_gas.pdf"
+        filepath=r"test_documents\ambuja_cement.pdf"
     )
 
     dialogues = parse_conference_call(transcript_dict=transcript)
