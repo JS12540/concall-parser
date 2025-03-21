@@ -13,10 +13,10 @@ def save_output(dialogues: dict, output_base_path: str, document_name: str):
     Takes the dialogues dict as input, splits it into three parts, each saved
     as a json file in a common directory with path output_base_path/document_name.
 
-    Params:
-        - dialogues (dict): Extracted dialogues, speaker-transcript pairs.
-        - output_base_path (str): Path to directory in which outputs are to be saved.
-        - document_name (str): Name of the file being parsed, corresponds to company name for now.
+    Args:
+        dialogues (dict): Extracted dialogues, speaker-transcript pairs.
+        output_base_path (str): Path to directory in which outputs are to be saved.
+        document_name (str): Name of the file being parsed, corresponds to company name for now.
     """
     for dialogue_type, dialogue in dialogues.items():
         output_dir_path = os.path.join(output_base_path, document_name)
@@ -36,10 +36,10 @@ def save_extracted_text(
 
     Takes in a transcript, saves it to a text file in a directory for human verification.
 
-    Params:
-        - transcript (dict): Page number, page text pair extracted using pdfplumber.
-        - document_name (str): Name of file being processed, corresponds to company name.
-        - output_base_path (str): Path of directory where transcripts are to be saved.
+    Args:
+        transcript (dict): Page number, page text pair extracted using pdfplumber.
+        document_name (str): Name of file being processed, corresponds to company name.
+        output_base_path (str): Path of directory where transcripts are to be saved.
     """
     output_dir_path = os.path.join(output_base_path, document_name)
     os.makedirs(output_base_path, exist_ok=True)
@@ -53,11 +53,11 @@ def save_extracted_text(
 def get_document_transcript(filepath: str):
     """Creates a text transcript of the given pdf document.
 
-    Params:
-        - filepath (str): Path to pdf file being processed.
+    Args:
+        filepath (str): Path to pdf file being processed.
 
     Returns:
-        - transcript (dict): Page number, page text pair as extracted using pdfplumber.
+        transcript (dict): Page number, page text pair as extracted using pdfplumber.
     """
     transcript = {}
     try:

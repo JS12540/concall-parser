@@ -199,8 +199,6 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     management_team = {}
     extracted_text = ""
     # Extract company name and management team
-    # TODO: need to add an extra if in page 2,
-    # else case should handle case like reliance (no names given)
     for page_number, text in transcript_dict.items():
         if page_number == 1:
             extracted_text += text
@@ -266,7 +264,7 @@ def find_management_names(transcript: dict[int, str], parser: ConferenceCallPars
 
     for page_number, text in transcript.items():
         extracted_text += text
-        if "Management" in text or "Participant" in text:
+        if "Management" in text or "Participants" in text:
             management_found_page = page_number
             logger.debug("Found management on page %s", management_found_page)
             # TODO: pop till this page number, irrelevant details
