@@ -6,7 +6,7 @@ import pdfplumber
 FILEPATH = "test_documents/apollo_hospitals.pdf"
 
 
-# TODO: fix unicode characters, \n in speecch
+# TODO: fix unicode characters in speech
 # TODO: last 2 extracted incorrectly - lines of\nbusinesses, Disclaimer
 
 def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[str]]:
@@ -31,7 +31,7 @@ def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[st
 
         for initial, name, speech in matches:
             speaker = f"{(initial or '').strip()} {name.strip()}".strip()  # Clean speaker name
-            speech = speech.strip()  # Clean speech text
+            speech = re.sub(r'\n', " ", speech).strip()  # Clean speech text
 
             if speaker not in all_speakers:
                 all_speakers.add(speaker)
