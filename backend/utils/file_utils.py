@@ -15,15 +15,19 @@ def get_document_transcript(filepath: str) -> dict[int, str]:
     Returns:
         transcript: Dictionary of page number, page text pair.
     """
-    transcript = dict()
+    transcript = {}
     try:
         with pdfplumber.open(filepath) as pdf:
-            logger.debug("Loaded document %s", filepath)
+            logger.debug("Loaded document")
+            page_number = 1
             for page in pdf.pages:
-                transcript[str(page.page_number)] = page.extract_text()
+                text = page.extract_text()
+                if text:
+                    transcript[page_number] = text
+                    page_number += 1
+        return transcript
     except Exception:
-        logger.exception("Could not extract transcript for file with path %s", filepath)
-    return transcript
+        logger.exception("Could not load file %s", filepath)
 
 
 def save_output(
@@ -42,7 +46,9 @@ def save_output(
     for dialogue_type, dialogue in dialogues.items():
         output_dir_path = os.path.join(output_base_path, document_name)
         os.makedirs(output_dir_path, exist_ok=True)
-        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
+        with open(
+            os.path.join(output_dir_path, f"{dialogue_type}.json"), "w"
+        ) as file:
             json.dump(dialogue, file, indent=4)
 
 
@@ -61,7 +67,7 @@ def save_transcript(
         output_base_path (str): Path of directory where transcripts are to be saved.
     """
     try:
-        document_name = os.path.basename(document_path)[:-4] # remove the .pdf
+        document_name = os.path.basename(document_path)[:-4]  # remove the .pdf
         output_dir_path = os.path.join(output_base_path, document_name)
         os.makedirs(output_base_path, exist_ok=True)
         with open(f"{output_dir_path}.txt", "w") as file:
@@ -70,4 +76,4 @@ def save_transcript(
                 file.write("\n\n")
         logger.info("Saved transcript text to file\n")
     except Exception:
-        logger.exception('Could not save document transcript')
+        logger.exception("Could not save document transcript")
