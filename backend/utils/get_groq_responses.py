@@ -1,5 +1,6 @@
-from constants import GROQ_API_KEY
 from groq import Groq
+
+from backend.constants import GROQ_API_KEY
 
 client = Groq(api_key=GROQ_API_KEY)
 

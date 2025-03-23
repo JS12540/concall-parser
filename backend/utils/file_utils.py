@@ -48,7 +48,7 @@ def save_output(
 
 def save_transcript(
     transcript: dict,
-    document_name: str,
+    document_path: str,
     output_base_path: str = "raw_transcript",
 ) -> None:
     """Save the extracted text to a file.
@@ -57,13 +57,17 @@ def save_transcript(
 
     Args:
         transcript (dict): Page number, page text pair extracted using pdfplumber.
-        document_name (str): Name of file being processed, corresponds to company name.
+        document_path (str): Path of file being processed, corresponds to company name.
         output_base_path (str): Path of directory where transcripts are to be saved.
     """
-    output_dir_path = os.path.join(output_base_path, document_name)
-    os.makedirs(output_base_path, exist_ok=True)
-    with open(f"{output_dir_path}.txt", "w") as file:
-        for _, text in transcript.items():
-            file.write(text)
-            file.write("\n\n")
-    logger.info("Saved transcript text to file\n")
+    try:
+        document_name = os.path.basename(document_path)[:-4] # remove the .pdf
+        output_dir_path = os.path.join(output_base_path, document_name)
+        os.makedirs(output_base_path, exist_ok=True)
+        with open(f"{output_dir_path}.txt", "w") as file:
+            for _, text in transcript.items():
+                file.write(text)
+                file.write("\n\n")
+        logger.info("Saved transcript text to file\n")
+    except Exception:
+        logger.exception('Could not save document transcript')

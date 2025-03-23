@@ -88,7 +88,7 @@ class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
     @staticmethod
-    def process(page_text: str) -> str | None:
+    def process(page_text: str) -> str:
         """Process the given page text to extract relevant management information.
 
         Args:

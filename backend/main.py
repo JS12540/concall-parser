@@ -163,7 +163,8 @@ class ConferenceCallParser:
                             "dialogue": self.clean_text(dialogue),
                         }
                     )
-        logger.info("Dialogues: \n\n%s", dialogues)
+        # logger.info("Dialogues: \n\n%s", dialogues)
+        logger.info("Extracted dialogues\n\n")
         return dialogues
 
 
@@ -217,7 +218,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
             " ".join(transcript_dict.values()), management_team
         )
 
-    logger.info(json.dumps(dialogues, indent=4) + "\n\n")
+    # logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
 
 
@@ -247,7 +248,10 @@ def find_management_names(
 
     for page_number, text in transcript.items():
         extracted_text += text
-        if "Management" in text or "Participants" in text:
+        management_list_conditions = re.search(
+            "Management", text, re.IGNORECASE
+        ) or re.search("Participants", text, re.IGNORECASE)
+        if management_list_conditions:
             management_found_page = page_number
             logger.debug("Found management on page %s", management_found_page)
             break
@@ -255,7 +259,7 @@ def find_management_names(
     # apollo case, ie. no management list given
     if management_found_page == 0:
         # get all speakers from text
-        logger.debug('Found no management list, switching to regex search')
+        logger.debug("Found no management list, switching to regex search")
         speakers = handle_only_management_case(transcript=transcript).keys()
         extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
         # pass in the first page(for company name), all extracted speakers separated by \n
@@ -275,6 +279,5 @@ if __name__ == "__main__":
     save_transcript(transcript, document_path)
 
     dialogues = parse_conference_call(transcript_dict=transcript)
-    logger.info('Parsed dialogues for %s \n\n',document_path)
-    save_output(dialogues, document_path, 'output')
-    print(dialogues, indent=4)
+    logger.info("Parsed dialogues for %s \n\n", document_path)
+    save_output(dialogues, document_path, "output")
