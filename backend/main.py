@@ -5,10 +5,11 @@ from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
 from backend.management_fix_no_names import handle_only_management_case
-from backend.tests.test_parsing import get_document_transcript
-
-# TODO: Need examples of dialogues extracted to make sense of things.
-# Need to add more logs for this.
+from backend.utils.file_utils import (
+    get_document_transcript,
+    save_output,
+    save_transcript,
+)
 
 
 class ConferenceCallParser:
@@ -162,7 +163,7 @@ class ConferenceCallParser:
                             "dialogue": self.clean_text(dialogue),
                         }
                     )
-
+        logger.info("Dialogues: \n\n%s", dialogues)
         return dialogues
 
 
@@ -195,30 +196,10 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
 def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
-    management_team = {}
-    extracted_text = ""
     # Extract company name and management team
-    for page_number, text in transcript_dict.items():
-        if page_number == 1:
-            extracted_text += text
-            # generalize for pages 1 and 2?
-            if "MANAGEMENT" in text:
-                # If first page contains management info, remove from doc, parse it
-                logger.debug(f"Page number popped:{page_number}")
-                transcript_dict.pop(page_number)
-                break
-        if page_number == 2:
-            # add check for management here, if not present, assume reliance case
-            if "MANAGEMENT" in text:
-                logger.debug(f"Page number popped:{page_number}")
-                extracted_text += text
-                transcript_dict.pop(1)
-                transcript_dict.pop(page_number)
-                break
-            else:
-                break
-
-    management_team = parser.extract_management_team(text=extracted_text)
+    management_team, transcript_dict = find_management_names(
+        transcript=transcript_dict, parser=parser
+    )
 
     logger.debug(management_team)
 
@@ -257,6 +238,7 @@ def find_management_names(
 
     Returns:
         speaker_names: A list of speaker names extracted for the apollo case.
+        transcript: Modified transcript dictionary, has a few irrelevant pages removed.
     """
     # ? Shouldn't the text we send to the agent just be of the page the
     # management names are on? Why are we saving all in extracted_text?
@@ -268,12 +250,12 @@ def find_management_names(
         if "Management" in text or "Participants" in text:
             management_found_page = page_number
             logger.debug("Found management on page %s", management_found_page)
-            # TODO: pop till this page number, irrelevant details
             break
 
     # apollo case, ie. no management list given
     if management_found_page == 0:
         # get all speakers from text
+        logger.debug('Found no management list, switching to regex search')
         speakers = handle_only_management_case(transcript=transcript).keys()
         extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
         # pass in the first page(for company name), all extracted speakers separated by \n
@@ -288,7 +270,11 @@ def find_management_names(
 
 
 if __name__ == "__main__":
-    transcript = get_document_transcript(filepath=r"test_documents/ambuja_cement.pdf")
+    document_path = r"test_documents/ambuja_cement.pdf"
+    transcript = get_document_transcript(filepath=document_path)
+    save_transcript(transcript, document_path)
 
     dialogues = parse_conference_call(transcript_dict=transcript)
+    logger.info('Parsed dialogues for %s \n\n',document_path)
+    save_output(dialogues, document_path, 'output')
     print(dialogues, indent=4)

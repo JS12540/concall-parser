@@ -6,19 +6,19 @@ import pdfplumber
 from backend.log_config import logger
 
 
-def get_text_transcript(filepath:str) -> dict[int, str]:
+def get_document_transcript(filepath: str) -> dict[int, str]:
     """Extracts text of a pdf document.
-    
+
     Args:
         filepath: Path to the pdf file whose text needs to be extracted.
-    
+
     Returns:
         transcript: Dictionary of page number, page text pair.
     """
     transcript = dict()
     try:
         with pdfplumber.open(filepath) as pdf:
-            logger.debug('Loaded document %s', filepath)
+            logger.debug("Loaded document %s", filepath)
             for page in pdf.pages:
                 transcript[str(page.page_number)] = page.extract_text()
     except Exception:
@@ -26,7 +26,9 @@ def get_text_transcript(filepath:str) -> dict[int, str]:
     return transcript
 
 
-def save_output(dialogues: dict, output_base_path: str, document_name: str) -> None:
+def save_output(
+    dialogues: dict, document_name: str, output_base_path: str = "output"
+) -> None:
     """Save dialogues to JSON files in the specified output path.
 
     Takes the dialogues dict as input, splits it into three parts, each saved
@@ -40,9 +42,7 @@ def save_output(dialogues: dict, output_base_path: str, document_name: str) -> N
     for dialogue_type, dialogue in dialogues.items():
         output_dir_path = os.path.join(output_base_path, document_name)
         os.makedirs(output_dir_path, exist_ok=True)
-        with open(
-            os.path.join(output_dir_path, f"{dialogue_type}.json"), "w"
-        ) as file:
+        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
             json.dump(dialogue, file, indent=4)
 
 

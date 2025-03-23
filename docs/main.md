@@ -2,8 +2,8 @@
 
 use this to fix import errors
 ``` bash
-export PYTHONPATH=/home/kakashi/build/concall/Concall-summarizer
-/home/kakashi/build/concall/.venv/bin/python /home/kakashi/build/concall/Concall-summarizer/backend/main.py
+export PYTHONPATH=/path/to/Concall-summarizer
+/path/to/.venv/bin/python /path/to/main.py
 ```
 
 
