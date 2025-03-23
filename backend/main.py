@@ -36,13 +36,12 @@ class ConferenceCallParser:
         match = re.search(pattern, text)
         return match.group(1) if match else "Company name not found"
 
-    def extract_management_team(self, text) -> list[dict[str, str]]:
+    def extract_management_team(self, text) -> dict[str, str]:
         """Extract management team members and their designations.
 
         Handles case where names of all management personnel participating in
         call are present on one page using the ExtractManagement agent.
         """
-        # ! possible issue with type hints in ExtractManagement, need to verify
         try:
             response = ExtractManagement.process(page_text=text)
             response = json.loads(response)
@@ -241,7 +240,9 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     return dialogues
 
 
-def find_management_names(transcript: dict[int, str], parser: ConferenceCallParser):
+def find_management_names(
+    transcript: dict[int, str], parser: ConferenceCallParser
+) -> tuple[list, dict[int, str]]:
     """Checks if the names of management team are present in the text or not.
 
     Checks the first three pages if they contain the management team, if not,
@@ -270,12 +271,20 @@ def find_management_names(transcript: dict[int, str], parser: ConferenceCallPars
             # TODO: pop till this page number, irrelevant details
             break
 
+    # apollo case, ie. no management list given
     if management_found_page == 0:
-        speech_pair = handle_only_management_case(transcript=transcript)
-        speaker_names = parser.extract_management_team(speakers=speech_pair.keys())
-        return speaker_names
+        # get all speakers from text
+        speakers = handle_only_management_case(transcript=transcript).keys()
+        extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
+        # pass in the first page(for company name), all extracted speakers separated by \n
+        speaker_names = parser.extract_management_team(text=extracted_text)
+        return speaker_names, transcript
+
+    # management list found, remove pages till that (irrelevant, do not contain speech)
+    transcript = {k: v for k, v in transcript.items() if k > management_found_page}
 
     speaker_names = parser.extract_management_team(text=extracted_text)
+    return speaker_names, transcript
 
 
 if __name__ == "__main__":

@@ -36,22 +36,44 @@ If no management information is found, return an empty dict: {}.
 
 SPEAKER_SELECTION_CONTEXT = """
 You're given a list of strings, each of which can be a person's name or some other string 
-(such as a sentence). Given this, classify each string into one of the two categories.
+(such as a sentence). Given this, return only the strings that are names, in the format given below.
 
 Extract and return the information in the following JSON format:
 
 {
-    "speaker": ["person_1", "person_2", "person_3"],
-    "other": ["other_text_1","other_text_2"]
+    "person_1_name":"",
+    "person_2_name":"",
+    "person_3_name":"",
 }
 
 Note: I am interested in the person names, that is my relevant category.
+Keep the values of the json empty, just need the keys.
 
 Example:
+Input: 
 
+"Apollo Hospitals Enterprise Limited 
+Transcript of Q3 FY25 Earnings Conference Call 
+February 11, 2025
+When  we  look at the whole area  of industrial as  well.  So,  the total decorative  plus 
+industrial business overall combined, the performance gets slightly better given the 
+fact  that  industrial  segment  has  done  slightly  better  as  compared  to  the  retail 
+segment. When we  look at the volume growth, we are  at about 1.7%  in terms of the 
+overall volume growth.
+Sonali Salgaonkar
+Guruprasad Mudlapur
+Kunal Dhamesha
+Disclaimer
+Currently, 34 wells have been put on stream
+\u2013 Managing Director and Chief Executive Officer, Siemens Limited - Thank you very much and all the best and a very happy year ahead.
+
+
+Output:
 {
-    "speaker": ["Sonali Salgaonkar", "Guruprasad Mudlapur", "Kunal Dhamesha"],
-    "other": ["Disclaimer", "Currently, 34 wells have been put on stream", "\u2013 Managing Director and Chief Executive Officer, Siemens Limited - Thank you very much and all the best and a very happy year ahead."]
+    "company_name": "Apollo Hospitals",
+    "Sonali Salgaonkar":"",
+    "Guruprasad Mudlapur":"",
+    "Kunal Dhamesha":""
 }
 
 Ensure:
@@ -66,7 +88,7 @@ class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
     @staticmethod
-    def process(page_text: str, speakers: list[str]) -> str | None:
+    def process(page_text: str) -> str | None:
         """Process the given page text to extract relevant management information.
 
         Args:
@@ -89,7 +111,8 @@ class ExtractManagement:
                 {"role": "user", "content": page_text},
             ]
 
-        # TODO: figure out how to pass that speaker list in
+        # TODO: update data model of response in case of speaker selection
+        # TODO: add company name fix in case of speaker selection
         try:
             response = get_groq_response(messages=messages, model=MODEL_NAME)
         except Exception:
