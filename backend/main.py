@@ -212,8 +212,10 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         # Extract dialogues
         dialogues = parser.extract_dialogues(transcript_dict)
     else:
-        # ?why do we do things differently if the moderator is not present?
+        # two cases: moderator is really not there, or moderator name is used.
         logger.debug("No moderator found, extracting management team from text")
+        # TODO: fix case where moderator name is used instead of keyword (llm call)
+        
         dialogues = extract_management_team_from_text(
             " ".join(transcript_dict.values()), management_team
         )

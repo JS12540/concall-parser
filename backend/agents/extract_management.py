@@ -100,6 +100,7 @@ class ExtractManagement:
             None
         """
         logger.debug("Request to extract management details")
+        # TODO: context selection logic is wrong, recheck 
         if page_text != "":
             messages = [
                 {"role": "system", "content": CONTEXT},
