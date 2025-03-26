@@ -11,7 +11,7 @@ and directs the flow of conversation. He does not participate in the conversatio
 
 You will be provided with some text, in which names of speakers are given along with what they said
 in the form of <speaker>: <speech> format. Check if any of the speakers is a moderator and return 
-that name only, in JSON format.
+that name only, as string.
 
 Example:
 Input:
@@ -28,18 +28,48 @@ Hitesh:  Thank you, Vipul. Good evening, everyone. Welcome to XYZ's earnings cal
 quarter of FY25.
 
 Output:
-{
-    "moderator":"Vipul Manupatra"
-}"""
+Vipul Manupatra
+
+Example 2:
+Input:
+Sh B. Srinivasan: 
+Good evening and a very happy new year to all of you.  
+Very happy to welcome you to the third quarter of financial year 2025 business presentation 
+of Reliance Industries Limited.  
+As always, we have our Chief Financial Officer (CFO) V. Srikanth walking you through the 
+consolidated  numbers  first,  then  we  will  have  Kiran  Thomas  talk  about  Jio, we willhave 
+Anshuman Thakur talk about Jio numbers, then we will have Dinesh Taluja talk about retail 
+and Sanjay Roy talking about E&P performance, then Srikanth will come back and then 
+summarise. Before summarising, he will also talk about O2C performance. 
+ 
+ 
+Sh V. Srikanth: 
+Thank you, Srini, and Happy New Year to everyone.  
+We had a good operating quarter with strong performances in each of our segments.  
+Revenue growth, EBITDA growth at close to 8%, and PAT (Profit After Tax) growth close to 
+12%.
+
+Output:
+(empty string)
+
+Note:
+Return empty string if no moderator exists.
+"""
 
 
 class CheckModerator:
     """Find moderator if exists in text and return name."""
-    def process(page_text: str):
+    @staticmethod
+    def process(page_text: str) -> str:
         """Takes in a text and finds if a moderator exists.
+
+        Intended to find moderator's name, then replace all occurences with "Moderator".
         
         Args:
             page_text (str): Extracted transcript from pdf of conference call, single page only.
+        
+        Returns:
+            Json string formatted as {"moderator":"<name>"} if moderator exists.
         """
         logger.debug("Request received to find moderator through name.")
         messages = [

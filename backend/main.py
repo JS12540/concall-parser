@@ -1,6 +1,7 @@
 import json
 import re
 
+from backend.agents.check_moderator import CheckModerator
 from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
 from backend.agents.extract_management import ExtractManagement
 from backend.log_config import logger
@@ -214,8 +215,13 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     else:
         # two cases: moderator is really not there, or moderator name is used.
         logger.debug("No moderator found, extracting management team from text")
-        # TODO: fix case where moderator name is used instead of keyword (llm call)
         
+        moderator_name = CheckModerator.process(page_text=transcript[1]).strip()
+        if moderator_name:
+            for _,text in transcript.items():
+                re.sub(moderator_name, "Moderator", text)
+        
+        # what does this do?
         dialogues = extract_management_team_from_text(
             " ".join(transcript_dict.values()), management_team
         )
