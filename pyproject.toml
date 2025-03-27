@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "CONCALL-SUMMARIZER"
+name = "concall-parser"
 version = "0.1.0"
 description = ""
 authors = ["Jay shah <jayshah0726@gmail.com>"]
 readme = "README.md"
 packages = [
-    { include = "concall_summarizer", from = "." },
+    { include = "parser", from = "." },
 ]
 
 [tool.poetry.dependencies]
