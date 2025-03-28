@@ -11,7 +11,7 @@ and directs the flow of conversation. He does not participate in the conversatio
 
 You will be provided with some text, in which names of speakers are given along with what they said
 in the form of <speaker>: <speech> format. Check if any of the speakers is a moderator and return 
-that name only, as string.
+that name only, as a JSON object.
 
 Example:
 Input:
@@ -28,7 +28,9 @@ Hitesh:  Thank you, Vipul. Good evening, everyone. Welcome to XYZ's earnings cal
 quarter of FY25.
 
 Output:
-Vipul Manupatra
+{
+    "moderator": "Vipul Manupatra"
+}
 
 Example 2:
 Input:
@@ -50,10 +52,12 @@ Revenue growth, EBITDA growth at close to 8%, and PAT (Profit After Tax) growth 
 12%.
 
 Output:
-(empty string)
+{
+    "moderator": ""
+}
 
 Note:
-Return empty string if no moderator exists.
+Return an empty string for the "moderator" key if no moderator exists.
 """
 
 
