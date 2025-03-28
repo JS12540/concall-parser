@@ -199,7 +199,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
     # Extract company name and management team
-    management_team, transcript_dict = find_management_names(
+    management_team, transcript_dict, management_found_page = find_management_names(
         transcript=transcript_dict, parser=parser
     )
 
@@ -215,18 +215,24 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     else:
         # two cases: moderator is really not there, or moderator name is used.
         logger.debug("No moderator found, extracting management team from text")
+
+        # logger.debug(transcript[management_found_page]+ '\n\n')
         
-        moderator_name = CheckModerator.process(page_text=transcript[1]).strip()
+        moderator_name = json.loads(CheckModerator.process(page_text=transcript[management_found_page]))['moderator'].strip()
+        logger.info(moderator_name)
         if moderator_name:
-            for _,text in transcript.items():
-                re.sub(moderator_name, "Moderator", text)
+            for page_number, text in transcript.items():
+                text = re.sub(rf'{re.escape(moderator_name)}:', "Moderator:", text)
+                transcript[page_number]=text
+            dialogues = parse_conference_call(transcript)
+            return dialogues
         
         # what does this do?
         dialogues = extract_management_team_from_text(
             " ".join(transcript_dict.values()), management_team
         )
 
-    # logger.info(json.dumps(dialogues, indent=4) + "\n\n")
+    logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
 
 
@@ -278,11 +284,11 @@ def find_management_names(
     transcript = {k: v for k, v in transcript.items() if k > management_found_page}
 
     speaker_names = parser.extract_management_team(text=extracted_text)
-    return speaker_names, transcript
+    return speaker_names, transcript, management_found_page
 
 
 if __name__ == "__main__":
-    document_path = r"test_documents/ambuja_cement.pdf"
+    document_path = r"test_documents/info_edge.pdf"
     transcript = get_document_transcript(filepath=document_path)
     save_transcript(transcript, document_path)
 

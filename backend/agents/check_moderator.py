@@ -57,7 +57,7 @@ Output:
 }
 
 Note:
-Return an empty string for the "moderator" key if no moderator exists.
+Return an empty string for the "moderator" key if no moderator exists in the text.
 """
 
 

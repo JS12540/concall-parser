@@ -1,0 +1,13 @@
+2025-03-28 20:50:45,639 - DEBUG - file_utils.py:21 - Loaded document
+2025-03-28 20:50:52,985 - INFO - file_utils.py:77 - Saved transcript text to file
+
+2025-03-28 20:50:52,986 - DEBUG - main.py:270 - Found management on page 3
+2025-03-28 20:50:52,986 - DEBUG - extract_management.py:102 - Request to extract management details
+2025-03-28 20:50:53,963 - DEBUG - main.py:206 - {'company_name': 'Info Edge (India) Limited', 'Sanjeev Bikhchandani': 'Founder & Vice Chairman', 'Hitesh Oberoi': 'Co Promoter & Managing Director', 'Chintan Thakkar': 'Director & CFO', 'Jaya Bhatia': 'Company Secretary & Compliance Officer'}
+2025-03-28 20:50:53,964 - DEBUG - main.py:217 - No moderator found, extracting management team from text
+2025-03-28 20:50:53,964 - DEBUG - check_moderator.py:78 - Request received to find moderator through name.
+2025-03-28 20:50:54,365 - INFO - main.py:222 - Vineet Ranjan
+2025-03-28 20:50:54,366 - DEBUG - main.py:270 - Found management on page 3
+2025-03-28 20:50:54,367 - DEBUG - extract_management.py:102 - Request to extract management details
+2025-03-28 20:50:54,980 - DEBUG - main.py:206 - {'company_name': 'Info Edge (India) Limited', 'Sanjeev Bikhchandani': 'Founder & Vice Chairman', 'Hitesh Oberoi': 'Co-Promoter & Managing Director', 'Chintan Thakkar': 'Director & CFO', 'Jaya Bhatia': 'Company Secretary & Compliance Officer'}
+2025-03-28 20:50:54,980 - DEBUG - main.py:116 - Speaker found: cid
