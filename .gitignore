@@ -177,3 +177,5 @@ cython_debug/
 # Ignore output and logs folders
 output/
 logs/
+
+*.log

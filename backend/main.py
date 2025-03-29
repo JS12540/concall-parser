@@ -203,7 +203,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         transcript=transcript_dict, parser=parser
     )
 
-    logger.debug(management_team)
+    logger.info(f"management_team: {management_team}")
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
@@ -214,23 +214,21 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         dialogues = parser.extract_dialogues(transcript_dict)
     else:
         # two cases: moderator is really not there, or moderator name is used.
-        logger.debug("No moderator found, extracting management team from text")
-
-        # logger.debug(transcript[management_found_page]+ '\n\n')
-        
+        logger.info("No moderator found, extracting management team from text")
         moderator_name = json.loads(CheckModerator.process(page_text=transcript[management_found_page]))['moderator'].strip()
-        logger.info(moderator_name)
+        logger.info(f"moderator_name: {moderator_name}")
         if moderator_name:
             for page_number, text in transcript.items():
                 text = re.sub(rf'{re.escape(moderator_name)}:', "Moderator:", text)
+                logger.info(f"Page {page_number} text: {text}")
                 transcript[page_number]=text
             dialogues = parse_conference_call(transcript)
             return dialogues
-        
-        # what does this do?
-        dialogues = extract_management_team_from_text(
-            " ".join(transcript_dict.values()), management_team
-        )
+        else:
+            # what does this do?
+            dialogues = extract_management_team_from_text(
+                " ".join(transcript_dict.values()), management_team
+            )
 
     logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
@@ -267,13 +265,13 @@ def find_management_names(
         ) or re.search("Participants", text, re.IGNORECASE)
         if management_list_conditions:
             management_found_page = page_number
-            logger.debug("Found management on page %s", management_found_page)
+            logger.info("Found management on page %s", management_found_page)
             break
 
     # apollo case, ie. no management list given
     if management_found_page == 0:
         # get all speakers from text
-        logger.debug("Found no management list, switching to regex search")
+        logger.info("Found no management list, switching to regex search")
         speakers = handle_only_management_case(transcript=transcript).keys()
         extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
         # pass in the first page(for company name), all extracted speakers separated by \n
