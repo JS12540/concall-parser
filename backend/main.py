@@ -60,7 +60,9 @@ class ConferenceCallParser:
             "end": [],
         }
 
-        for _, text in transcript_dict.items():
+        for page_number, text in transcript_dict.items():
+            if page_number <=2:
+                continue
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
             if self.last_speaker:
@@ -115,7 +117,7 @@ class ConferenceCallParser:
                 dialogue = match.group("dialogue")
                 logger.debug(f"Speaker found: {speaker}")
                 self.last_speaker = speaker  # Update last speaker
-
+                intent = None
                 if speaker == "Moderator":
                     logger.debug(
                         "Moderator statement found, giving it for classification"
@@ -220,8 +222,8 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
         if moderator_name:
             for page_number, text in transcript.items():
                 text = re.sub(rf'{re.escape(moderator_name)}:', "Moderator:", text)
-                logger.info(f"Page {page_number} text: {text}")
                 transcript[page_number]=text
+            print(transcript)
             dialogues = parse_conference_call(transcript)
             return dialogues
         else:
