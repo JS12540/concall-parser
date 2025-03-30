@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="concall-parser",
-    version="0.1.0",
+    version="0.0.1",
     description="",
-    author="Jay Shah",
-    author_email="jayshah0726@gmail.com",
+    author="Jay Shah, Pranshu Raj",
+    author_email="jayshah0726@gmail.com, pranshuraj65536@gmail.com",
     description="A short description of your package",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
