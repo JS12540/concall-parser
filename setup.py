@@ -6,6 +6,10 @@ setup(
     description="",
     author="Jay Shah",
     author_email="jayshah0726@gmail.com",
+    description="A short description of your package",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/JS12540/concall-parser",
     packages=find_packages(include=["parser", "parser.*"]),
     install_requires=[
         "groq==0.15.0",
@@ -17,5 +21,10 @@ setup(
             "pre-commit==3.7.0",
         ]
     },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
     python_requires=">=3.10",
 )
