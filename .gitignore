@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# test input and output files
+*.txt
+*.pdf
+
 # Distribution / packaging
 .Python
 build/
@@ -56,7 +60,6 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -169,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Ignore output and logs folders
+output/
+logs/
