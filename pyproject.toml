@@ -5,7 +5,7 @@ description = ""
 authors = ["Jay shah <jayshah0726@gmail.com>"]
 readme = "README.md"
 packages = [
-    { include = "parser", from = "." },
+    { include = "concall_parser", from = "." },
 ]
 
 [tool.poetry.dependencies]
