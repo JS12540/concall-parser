@@ -38,7 +38,7 @@ class ConferenceCallParser:
         match = re.search(pattern, text)
         return match.group(1) if match else "Company name not found"
 
-    def extract_management_team(self, text:str) -> dict[str, str]:
+    def extract_management_team(self, text) -> dict[str, str]:
         """Extract management team members and their designations.
 
         Handles case where names of all management personnel participating in
@@ -52,7 +52,7 @@ class ConferenceCallParser:
             logger.exception("Could not extract management from text")
             return None
 
-    def extract_dialogues(self, transcript_dict: dict[int, str], management_team) -> dict:
+    def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
         """Extract dialogues and classify stages."""
         dialogues = {
             "commentary_and_future_outlook": [],
@@ -60,7 +60,9 @@ class ConferenceCallParser:
             "end": [],
         }
 
-        for _, text in transcript_dict.items():
+        for page_number, text in transcript_dict.items():
+            if page_number <= 2:
+                continue
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
             if self.last_speaker:
@@ -69,6 +71,7 @@ class ConferenceCallParser:
                         "Skipping moderator statement as it is not needed anymore."
                     )
                 else:
+                    # analyst or management, get their name
                     first_speaker_match = self.speaker_pattern.search(text)
                     if first_speaker_match:
                         leftover_text = text[: first_speaker_match.start()].strip()
@@ -79,28 +82,19 @@ class ConferenceCallParser:
                             )
                             # TODO: refer to actual data to create model, example
                             if self.current_analyst:
-                                logger.info(
-                                    json.dumps(dialogues, indent=4)
-                                    + "\n"
-                                    + str(self.current_analyst)
-                                    + "\n\n"
-                                )
                                 dialogues["analyst_discussion"][self.current_analyst][
                                     "dialogue"
                                 ][-1]["dialogue"] += (" " + leftover_text)
                             else:
-                                logger.info(
-                                    json.dumps(dialogues, indent=4)
-                                    + "\n"
-                                    + str(first_speaker_match)
-                                    + "\n\n"
-                                )
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
                                 ] += (" " + leftover_text)
 
             # Extract all speakers in that page
             matches = self.speaker_pattern.finditer(text)
+
+            # TODO: why don't we replace self.speaker_pattern.finditer with matches?
+            # ? does speaker pattern find speakers in the text or something else?
             if not any(self.speaker_pattern.finditer(text)) and text.strip():
                 # If no matches and text exists, append to the last speaker's dialogue
                 # this happens when previous speaker (last speaker on previous page) is
@@ -113,12 +107,6 @@ class ConferenceCallParser:
                         -1
                     ]["dialogue"] += " " + self.clean_text(text)
                 else:
-                    logger.info(
-                                    json.dumps(dialogues, indent=4)
-                                    + "\n"
-                                    + str(first_speaker_match)
-                                    + "\n\n"
-                                )
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
                     ] += " " + self.clean_text(text)
@@ -129,7 +117,7 @@ class ConferenceCallParser:
                 dialogue = match.group("dialogue")
                 logger.debug(f"Speaker found: {speaker}")
                 self.last_speaker = speaker  # Update last speaker
-
+                intent = None
                 if speaker == "Moderator":
                     logger.debug(
                         "Moderator statement found, giving it for classification"
@@ -185,8 +173,11 @@ class ConferenceCallParser:
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     """Extract management dialogues from text until the next speaker."""
-    extracted_dialogues = dict()
+    extracted_dialogues = {}  # To store extracted dialogues
 
+    # Create regex pattern to find each management member and what they spoke
+    # extracts all management name and speech pairs in a given text
+    # ? but what if some other guy talks in between? is this handled beforehand?
     management_pattern = (
         r"("
         + "|".join(re.escape(name) for name in management_team.keys())
@@ -194,12 +185,13 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
         + "|".join(re.escape(name) for name in management_team.keys())
         + r")|$)"
     )
+    # ? what does finditer, group and dotall do
     matches = re.finditer(management_pattern, text, re.DOTALL)
 
+    # ? what is the input and output here - how are dialogues extracted? i need logs to understand
     for match in matches:
         speaker = match.group(1)
         dialogue = match.group(2).strip()
-        logger.info(f"{speaker}     {dialogue}\n\n")
         extracted_dialogues[speaker] = dialogue
 
     return extracted_dialogues
@@ -208,7 +200,7 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
 def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
-
+    # Extract company name and management team
     management_team, transcript_dict, management_found_page = find_management_names(
         transcript=transcript_dict, parser=parser
     )
@@ -221,22 +213,21 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
     if moderator_found:
         # Extract dialogues
-        dialogues = parser.extract_dialogues(transcript_dict, management_team)
+        dialogues = parser.extract_dialogues(transcript_dict)
     else:
         # two cases: moderator is really not there, or moderator name is used.
         logger.info("No moderator found, extracting management team from text")
         moderator_name = json.loads(
-            CheckModerator.process(page_text=transcript_dict[management_found_page + 1])
+            CheckModerator.process(page_text=transcript[management_found_page+1])
         )["moderator"].strip()
         logger.info(f"moderator_name: {moderator_name}")
         if moderator_name:
             for page_number, text in transcript.items():
-                text = re.sub(rf'{re.escape(moderator_name)}:', "Moderator:", text)
-                logger.info(f"Page {page_number} text: {text}")
-                transcript[page_number]=text
-            dialogues = parse_conference_call(transcript)
-            return dialogues
+                text = re.sub(rf"{re.escape(moderator_name)}:", "Moderator:", text)
+                transcript[page_number] = text
+            
         else:
+            # what does this do?
             dialogues = extract_management_team_from_text(
                 " ".join(transcript_dict.values()), management_team
             )
@@ -247,7 +238,7 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
 
 def find_management_names(
     transcript: dict[int, str], parser: ConferenceCallParser
-) -> tuple[dict[str, str], dict[int, str], int]:
+) -> tuple[list, dict[int, str]]:
     """Checks if the names of management team are present in the text or not.
 
     Checks the first three pages if they contain the management team, if not,
@@ -300,7 +291,7 @@ def find_management_names(
 
 
 if __name__ == "__main__":
-    document_path = r"test_documents/ambuja_cement.pdf"
+    document_path = r"test_documents/info_edge.pdf"
     transcript = get_document_transcript(filepath=document_path)
     save_transcript(transcript, document_path)
 
