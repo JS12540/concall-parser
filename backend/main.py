@@ -61,7 +61,7 @@ class ConferenceCallParser:
         }
 
         for page_number, text in transcript_dict.items():
-            if page_number <=2:
+            if page_number <= 2:
                 continue
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
@@ -217,15 +217,15 @@ def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
     else:
         # two cases: moderator is really not there, or moderator name is used.
         logger.info("No moderator found, extracting management team from text")
-        moderator_name = json.loads(CheckModerator.process(page_text=transcript[management_found_page]))['moderator'].strip()
+        moderator_name = json.loads(
+            CheckModerator.process(page_text=transcript[management_found_page+1])
+        )["moderator"].strip()
         logger.info(f"moderator_name: {moderator_name}")
         if moderator_name:
             for page_number, text in transcript.items():
-                text = re.sub(rf'{re.escape(moderator_name)}:', "Moderator:", text)
-                transcript[page_number]=text
-            print(transcript)
-            dialogues = parse_conference_call(transcript)
-            return dialogues
+                text = re.sub(rf"{re.escape(moderator_name)}:", "Moderator:", text)
+                transcript[page_number] = text
+            
         else:
             # what does this do?
             dialogues = extract_management_team_from_text(
@@ -255,16 +255,17 @@ def find_management_names(
         speaker_names: A list of speaker names extracted for the apollo case.
         transcript: Modified transcript dictionary, has a few irrelevant pages removed.
     """
-    # ? Shouldn't the text we send to the agent just be of the page the
-    # management names are on? Why are we saving all in extracted_text?
     extracted_text = ""
     management_found_page = 0
 
     for page_number, text in transcript.items():
         extracted_text += text
-        management_list_conditions = re.search(
-            "Management", text, re.IGNORECASE
-        ) or re.search("Participants", text, re.IGNORECASE)
+        # third condition - handles info edge - edge case
+        management_list_conditions = (
+            re.search("Management", text, re.IGNORECASE)
+            or re.search("Participants", text, re.IGNORECASE)
+            or re.search("anagement", text, re.IGNORECASE)
+        )
         if management_list_conditions:
             management_found_page = page_number
             logger.info("Found management on page %s", management_found_page)
@@ -281,7 +282,9 @@ def find_management_names(
         return speaker_names, transcript
 
     # management list found, remove pages till that (irrelevant, do not contain speech)
-    transcript = {k: v for k, v in transcript.items() if k > management_found_page}
+    for page_number in list(transcript.keys()):
+        if page_number <= management_found_page:
+            transcript.pop(page_number)
 
     speaker_names = parser.extract_management_team(text=extracted_text)
     return speaker_names, transcript, management_found_page
