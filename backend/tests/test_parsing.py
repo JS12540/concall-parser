@@ -1,5 +1,5 @@
-import json
 import os
+from enum import Enum
 
 from backend.log_config import logger
 from backend.main import parse_conference_call
@@ -9,10 +9,27 @@ from backend.utils.file_utils import (
     save_transcript,
 )
 
-ERROR_CURSOR_FILE = "failed_files.json"
+FAILED_FILES_LOG = "failed_files.txt"
+SUCCESS_FILES_LOG = 'success_files.txt'
 
 
-def test_documents(test_dir_path: str, test_all: bool = False):
+class TestChoices(Enum):
+    """What kind of files to test."""
+    TEST_ALL='all'
+    TEST_FAILING = 'failing'
+    SKIP_SUCCESSFUL='skip'
+
+
+def process_single_file(filepath:str, path:str):
+    """Run a single file and save its output and log."""
+    transcript = get_document_transcript(filepath)
+    save_transcript(transcript, path, "raw_transcript")
+
+    dialogues = parse_conference_call(transcript_dict=transcript)
+    save_output(dialogues, os.path.basename(path), "output")
+
+
+def process_batch(test_dir_path: str, test_all: bool = False):
     """Test all documents in a directory for concall parsing.
 
     Iterates over all files in a directory containing documents for testing,
@@ -23,36 +40,38 @@ def test_documents(test_dir_path: str, test_all: bool = False):
         test_all (bool): Flag to toggle testing all documents or only those
             that failed last test.
     """
-    if os.path.exists(ERROR_CURSOR_FILE):
-        with open(ERROR_CURSOR_FILE) as file:
-            error_files = set(json.load(file))
-
+    if os.path.exists(FAILED_FILES_LOG):
+        with open(FAILED_FILES_LOG) as file:
+            error_files = file.readlines()
+    if os.path.exists(SUCCESS_FILES_LOG):
+        with open(SUCCESS_FILES_LOG) as file:
+            success_files = file.readlines()
+    
+    failed = open(FAILED_FILES_LOG, 'w')
+    successful = open(SUCCESS_FILES_LOG, 'w')
+    
     if not test_all:
         files_to_test = error_files
     else:
         files_to_test = set(os.listdir(test_dir_path))
+        # also include option to not test successful
 
     for path in files_to_test:
         try:
             filepath = os.path.join(test_dir_path, path)
             logger.info("Testing %s\n", path)
-
-            transcript = get_document_transcript(filepath)
-            save_transcript(transcript, path, "raw_transcript")
-
-            dialogues = parse_conference_call(transcript_dict=transcript)
-            save_output(dialogues, os.path.basename(path), "output")
-
+            process_single_file(filepath, path)
+            successful.write(path+'\n')
         except Exception:
-            error_files.add(path)
+            failed.write(path+'\n')
             logger.exception(
                 "Error while processing file %s",
             )
             continue
-
-    with open(ERROR_CURSOR_FILE, "w") as file:
-        json.dump(list(error_files), file)
+    
+    failed.close()
+    successful.close()
 
 
 if __name__ == "__main__":
-    test_documents("test_documents", True)
+    process_batch("test_documents", True)
