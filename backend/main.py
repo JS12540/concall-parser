@@ -298,7 +298,7 @@ def find_management_names(
 
 
 if __name__ == "__main__":
-    document_path = r"test_documents/info_edge.pdf"
+    document_path = r"test_documents/tata_motors.pdf"
     logger.info(f"Starting testing for {document_path}")
     try:
         transcript = get_document_transcript(filepath=document_path)

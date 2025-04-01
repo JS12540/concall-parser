@@ -25,7 +25,7 @@ def process_single_file(filepath:str, path:str):
     transcript = get_document_transcript(filepath)
     save_transcript(transcript, path, "raw_transcript")
 
-    dialogues = parse_conference_call(transcript_dict=transcript)
+    dialogues = parse_conference_call(transcript=transcript)
     save_output(dialogues, os.path.basename(path), "output")
 
 
