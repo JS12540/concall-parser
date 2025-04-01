@@ -44,7 +44,7 @@ def save_output(
         document_name (str): Name of the file being parsed, corresponds to company name for now.
     """
     for dialogue_type, dialogue in dialogues.items():
-        output_dir_path = os.path.join(output_base_path, document_name)
+        output_dir_path = os.path.join(output_base_path, os.path.basename(document_name)[:-4])
         os.makedirs(output_dir_path, exist_ok=True)
         with open(
             os.path.join(output_dir_path, f"{dialogue_type}.json"), "w"

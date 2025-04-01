@@ -54,7 +54,7 @@ class ConferenceCallParser:
             logger.exception("Could not extract management from text")
             return None
 
-    def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
+    def extract_dialogues(self, transcript: dict[int, str]) -> dict:
         """Extract dialogues and classify stages."""
         dialogues = {
             "commentary_and_future_outlook": [],
@@ -63,11 +63,12 @@ class ConferenceCallParser:
         }
         intent = None
 
-        for page_number, text in transcript_dict.items():
-            if page_number <= 2:
-                continue
+        for page_number, text in transcript.items():
+            # if page_number <= 2:
+            #     continue
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
+            logger.info(f"Parsing page number: {page_number}")
             if self.last_speaker:
                 if self.last_speaker == "Moderator":
                     logger.debug(
@@ -107,17 +108,17 @@ class ConferenceCallParser:
                     f"No speaker pattern found, appending text to {self.last_speaker}"
                 )
                 if self.current_analyst:
-                    logger.info(f"Dialogues:   {dialogues}\n\n")
+                    # logger.info(f"Dialogues:   {dialogues}\n\n")
                     dialogues["analyst_discussion"][self.current_analyst]["dialogue"][
                         -1
                     ]["dialogue"] += " " + self.clean_text(text)
                 else:
-                    logger.info(f"Dialogues:   {dialogues}\n\n")
+                    # logger.info(f"Dialogues:   {dialogues}\n\n")
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
                     ] += " " + self.clean_text(text)
-                logger.info(f"Dialogues:   {dialogues}\n\n")
-            
+                # logger.info(f"Dialogues:   {dialogues}\n\n")
+
             for match in matches:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue")
@@ -147,7 +148,7 @@ class ConferenceCallParser:
                     continue
 
                 if intent == "opening":
-                    logger.info(f"Dialogues: {dialogues}\n\n")
+                    # logger.info(f"Dialogues: {dialogues}\n\n")
                     dialogues["commentary_and_future_outlook"].append(
                         {
                             "speaker": speaker,
@@ -155,7 +156,7 @@ class ConferenceCallParser:
                         }
                     )
                 elif intent == "new_analyst_start":
-                    logger.info(f"Dialogues: {dialogues}\n\n")
+                    # logger.info(f"Dialogues: {dialogues}\n\n")
                     logger.debug(f"Analyst name: {self.current_analyst}")
                     dialogues["analyst_discussion"][self.current_analyst][
                         "dialogue"
@@ -166,7 +167,7 @@ class ConferenceCallParser:
                         }
                     )
                 elif intent == "end":
-                    logger.info(f"Dialogues: {dialogues}\n\n")
+                    # logger.info(f"Dialogues: {dialogues}\n\n")
                     dialogues["end"].append(
                         {
                             "speaker": speaker,
@@ -204,39 +205,38 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     return extracted_dialogues
 
 
-def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
+def parse_conference_call(transcript: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
     # Extract company name and management team
-    management_team, transcript_dict, management_found_page = find_management_names(
-        transcript=transcript_dict, parser=parser
+    management_team, transcript, management_found_page = find_management_names(
+        transcript=transcript, parser=parser
     )
 
     logger.info(f"management_team: {management_team}")
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
-    moderator_found = any("Moderator:" in text for text in transcript_dict.values())
+    moderator_found = any("Moderator:" in text for text in transcript.values())
 
     if moderator_found:
-        # Extract dialogues
-        dialogues = parser.extract_dialogues(transcript_dict)
+        dialogues = parser.extract_dialogues(transcript)
     else:
-        # two cases: moderator is really not there, or moderator name is used.
-        logger.info("No moderator found, extracting management team from text")
+        logger.info("No moderator found, extracting name from text")
         moderator_name = json.loads(
-            CheckModerator.process(page_text=transcript_dict[management_found_page+1])
+            CheckModerator.process(page_text=transcript[management_found_page + 1])
         )["moderator"].strip()
         logger.info(f"moderator_name: {moderator_name}")
+
         if moderator_name:
-            for page_number, text in transcript_dict.items():
+            for page_number, text in transcript.items():
                 text = re.sub(rf"{re.escape(moderator_name)}:", "Moderator:", text)
-                transcript_dict[page_number] = text
-            
+                transcript[page_number] = text
+            dialogues = parser.extract_dialogues(transcript)
         else:
-            # what does this do?
+            logger.info("No moderator in transcript")
             dialogues = extract_management_team_from_text(
-                " ".join(transcript_dict.values()), management_team
+                " ".join(transcript.values()), management_team
             )
 
     logger.info(json.dumps(dialogues, indent=4) + "\n\n")
@@ -298,12 +298,13 @@ def find_management_names(
 
 
 if __name__ == "__main__":
-    document_path = r"test_documents/ambuja_cement.pdf"
+    document_path = r"test_documents/info_edge.pdf"
+    logger.info(f"Starting testing for {document_path}")
     try:
         transcript = get_document_transcript(filepath=document_path)
         save_transcript(transcript, document_path)
 
-        dialogues = parse_conference_call(transcript_dict=transcript)
+        dialogues = parse_conference_call(transcript=transcript)
         logger.info("Parsed dialogues for %s \n\n", document_path)
         save_output(dialogues, document_path, "output")
     except Exception:

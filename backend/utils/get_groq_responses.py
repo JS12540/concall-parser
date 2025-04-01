@@ -1,6 +1,7 @@
-from groq import Groq
+from groq import APIStatusError, Groq
 
 from backend.constants import GROQ_API_KEY
+from backend.log_config import logger
 
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -19,6 +20,8 @@ def get_groq_response(messages, model):
             response_format={"type": "json_object"},
         )
         return response.choices[0].message.content
-    except Exception as e:
-        print(f"Groq API error: {e}")
-        return None
+    except APIStatusError:
+        logger.exception("Groq error - check prompt size")
+    except Exception:
+        logger.exception("Groq response error")
+    return None
