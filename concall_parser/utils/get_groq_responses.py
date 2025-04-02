@@ -1,7 +1,7 @@
 from groq import APIStatusError, Groq
 
-from backend.constants import GROQ_API_KEY
-from backend.log_config import logger
+from concall_parser.constants import GROQ_API_KEY
+from concall_parser.log_config import logger
 
 client = Groq(api_key=GROQ_API_KEY)
 

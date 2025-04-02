@@ -1,6 +1,6 @@
-from backend.constants import MODEL_NAME
-from backend.log_config import logger
-from backend.utils.get_groq_responses import get_groq_response
+from concall_parser.constants import MODEL_NAME
+from concall_parser.log_config import logger
+from concall_parser.utils.get_groq_responses import get_groq_response
 
 CONTEXT = """
 You are an AI assistant designed to find if there is a speaker playing the role of moderator from a

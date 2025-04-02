@@ -1,9 +1,9 @@
 import os
 from enum import Enum
 
-from backend.log_config import logger
-from backend.main import parse_conference_call
-from backend.utils.file_utils import (
+from concall_parser.log_config import logger
+from concall_parser.main import parse_conference_call
+from concall_parser.utils.file_utils import (
     get_document_transcript,
     save_output,
     save_transcript,
@@ -43,9 +43,9 @@ def process_batch(test_dir_path: str, test_all: bool = False):
     if os.path.exists(FAILED_FILES_LOG):
         with open(FAILED_FILES_LOG) as file:
             error_files = file.readlines()
-    if os.path.exists(SUCCESS_FILES_LOG):
-        with open(SUCCESS_FILES_LOG) as file:
-            success_files = file.readlines()
+    # if os.path.exists(SUCCESS_FILES_LOG):
+    #     with open(SUCCESS_FILES_LOG) as file:
+    #         success_files = file.readlines()
     
     failed = open(FAILED_FILES_LOG, 'w')
     successful = open(SUCCESS_FILES_LOG, 'w')

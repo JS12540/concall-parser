@@ -1,12 +1,14 @@
 import json
 import re
 
-from backend.agents.check_moderator import CheckModerator
-from backend.agents.classify_moderator_intent import ClassifyModeratorIntent
-from backend.agents.extract_management import ExtractManagement
-from backend.log_config import logger
-from backend.management_fix_no_names import handle_only_management_case
-from backend.utils.file_utils import (
+from concall_parser.agents.check_moderator import CheckModerator
+from concall_parser.agents.classify_moderator_intent import (
+    ClassifyModeratorIntent,
+)
+from concall_parser.agents.extract_management import ExtractManagement
+from concall_parser.log_config import logger
+from concall_parser.management_fix_no_names import handle_only_management_case
+from concall_parser.utils.file_utils import (
     get_document_transcript,
     save_output,
     save_transcript,

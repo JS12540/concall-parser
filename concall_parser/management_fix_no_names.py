@@ -1,7 +1,4 @@
-import json
 import re
-
-import pdfplumber
 
 FILEPATH = "test_documents/apollo_hospitals.pdf"
 
@@ -41,30 +38,3 @@ def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[st
 
     print(f"Extracted Speakers: {all_speakers}")
     return speech_pair
-
-
-def test_handle_only_management_case(filepath: str) -> None:
-    """Tests the extraction function using a provided PDF file.
-
-    Args:
-        filepath: Path to the PDF file containing the transcript.
-    """
-    transcript: dict[int, str] = {}
-
-    with pdfplumber.open(filepath) as pdf:
-        for page in pdf.pages:
-            transcript[str(page.page_number)] = page.extract_text()
-
-    speeches = handle_only_management_case(transcript=transcript)
-
-    with open("output/test_management_fix.json", "w") as file:
-        json.dump(speeches, file, indent=4)
-
-
-def test_runner():
-    """Placeholder for future implementation of batch testing across multiple documents."""
-    pass
-
-
-if __name__ == "__main__":
-    test_handle_only_management_case(filepath=FILEPATH)
