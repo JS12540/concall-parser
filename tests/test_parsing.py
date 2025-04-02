@@ -74,4 +74,4 @@ def process_batch(test_dir_path: str, test_all: bool = False):
 
 
 if __name__ == "__main__":
-    process_batch("test_documents", True)
+    process_batch("test_documents", test_all=True)
