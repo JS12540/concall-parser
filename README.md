@@ -37,7 +37,7 @@
 - If you want to ignore "Line too long" errors for a specific file, because you either don't like how `ruff` formats it (or isn't able to), you can add a comment at the top of the file: `# ruff: noqa: E501` which will ignore that specific error for that file. This is not recommended, but we don't want to waste time fixing line lengths but be conscious that your code may be harder to read.
 
 
-## No module named backend error fix
+## No module named concall_parser error fix
 
 PYTHONPATH is an environment variable that tells Python where to look for modules and packages.
 By adding $(pwd) (or $(Get-Location) in PowerShell), you include the current directory in Python’s module search path.
