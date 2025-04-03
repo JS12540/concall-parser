@@ -1,5 +1,5 @@
 from concall_parser.constants import MODEL_NAME
-from concall_parser.utils.groq import get_groq_response
+from concall_parser.utils.get_groq_responses import get_groq_response
 
 CONTEXT = """
 Classify the following moderator statement into one of the three categories:

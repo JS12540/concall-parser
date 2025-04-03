@@ -1,9 +1,15 @@
 import json
 import re
 
-from concall_parser.parser import ConferenceCallParser
+from concall_parser.agents.check_moderator import CheckModerator
 from concall_parser.log_config import logger
-import pdfplumber
+from concall_parser.management_only import handle_only_management_case
+from concall_parser.parser import ConferenceCallParser
+from concall_parser.utils.file_utils import (
+    get_document_transcript,
+    save_output,
+    save_transcript,
+)
 
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
@@ -32,84 +38,107 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     return extracted_dialogues
 
 
-def parse_conference_call(transcript_dict: dict[int, str]) -> dict:
+def parse_conference_call(transcript: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
     parser = ConferenceCallParser()
-    management_team = {}
-    extracted_text = ""
     # Extract company name and management team
-    # TODO: need to add an extra if in page 2,
-    # else case should handle case like reliance (no names given)
-    for page_number, text in transcript_dict.items():
-        if page_number == 1:
-            extracted_text += text
-            # generalize for pages 1 and 2?
-            if "MANAGEMENT" in text:
-                # If first page contains management info, remove from doc, parse it
-                logger.debug(f"Page number popped:{page_number}")
-                transcript_dict.pop(page_number)
-                break
-        if page_number == 2:
-            # add check for management here, if not present, assume reliance case
-            if "MANAGEMENT" in text:
-                logger.debug(f"Page number popped:{page_number}")
-                extracted_text += text
-                transcript_dict.pop(1)
-                transcript_dict.pop(page_number)
-                break
-            else:
-                break
+    management_team, transcript, management_found_page = find_management_names(
+        transcript=transcript, parser=parser
+    )
 
-    management_team = parser.extract_management_team(text=extracted_text)
-
-    logger.debug(management_team)
+    logger.info(f"management_team: {management_team}")
 
     # Check if moderator exists
     # Can't this be put inside that if? are we using this later?
-    moderator_found = any(
-        "Moderator:" in text for text in transcript_dict.values()
-    )
+    moderator_found = any("Moderator:" in text for text in transcript.values())
 
     if moderator_found:
-        # Extract dialogues
-        dialogues = parser.extract_dialogues(transcript_dict)
+        dialogues = parser.extract_dialogues(transcript)
     else:
-        # ?why do we do things differently if the moderator is not present?
-        logger.debug("No moderator found, extracting management team from text")
-        dialogues = extract_management_team_from_text(
-            " ".join(transcript_dict.values()), management_team
-        )
+        logger.info("No moderator found, extracting name from text")
+        moderator_name = json.loads(
+            CheckModerator.process(page_text=transcript[management_found_page + 1])
+        )["moderator"].strip()
+        logger.info(f"moderator_name: {moderator_name}")
+
+        if moderator_name:
+            for page_number, text in transcript.items():
+                text = re.sub(rf"{re.escape(moderator_name)}:", "Moderator:", text)
+                transcript[page_number] = text
+            dialogues = parser.extract_dialogues(transcript)
+        else:
+            logger.info("No moderator in transcript")
+            dialogues = extract_management_team_from_text(
+                " ".join(transcript.values()), management_team
+            )
 
     logger.info(json.dumps(dialogues, indent=4) + "\n\n")
     return dialogues
 
-def get_document_transcript(filepath: str):
-    """Creates a text transcript of the given pdf document.
 
-    Params:
-        - filepath (str): Path to pdf file being processed.
+def find_management_names(
+    transcript: dict[int, str], parser: ConferenceCallParser
+) -> tuple[list, dict[int, str]]:
+    """Checks if the names of management team are present in the text or not.
+
+    Checks the first three pages if they contain the management team, if not,
+    assume apollo case and extract all speakers.
+
+    Passes the page containing name of management back in the first case, names
+    of all speakers in the apollo case.
+
+    Args:
+        transcript: The page number, page text pair dict extracted from the document.
+        parser: ConferenceCallParser object required for text extraction.
 
     Returns:
-        - transcript (dict): Page number, page text pair as extracted using pdfplumber.
+        speaker_names: A list of speaker names extracted for the apollo case.
+        transcript: Modified transcript dictionary, has a few irrelevant pages removed.
     """
-    transcript = {}
-    try:
-        with pdfplumber.open(filepath) as pdf:
-            logger.debug("Loaded document")
-            page_number = 1
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    transcript[page_number] = text
-                    page_number += 1
-        return transcript
-    except Exception:
-        logger.exception("Could not load file %s", filepath)
+    extracted_text = ""
+    management_found_page = 0
+
+    for page_number, text in transcript.items():
+        extracted_text += text
+        # third condition - handles info edge - edge case
+        management_list_conditions = (
+            re.search("Management", text, re.IGNORECASE)
+            or re.search("Participants", text, re.IGNORECASE)
+            or re.search("anagement", text, re.IGNORECASE)
+        )
+        if management_list_conditions:
+            management_found_page = page_number
+            logger.info("Found management on page %s", management_found_page)
+            break
+
+    # apollo case, ie. no management list given
+    if management_found_page == 0:
+        # get all speakers from text
+        logger.info("Found no management list, switching to regex search")
+        speakers = handle_only_management_case(transcript=transcript).keys()
+        extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
+        # pass in the first page(for company name), all extracted speakers separated by \n
+        speaker_names = parser.extract_management_team(text=extracted_text)
+        return speaker_names, transcript
+
+    # management list found, remove pages till that (irrelevant, do not contain speech)
+    for page_number in list(transcript.keys()):
+        if page_number <= management_found_page:
+            transcript.pop(page_number)
+
+    speaker_names = parser.extract_management_team(text=extracted_text)
+    return speaker_names, transcript, management_found_page
+
 
 if __name__ == "__main__":
-    transcript = get_document_transcript(
-        filepath=r"test_documents\ambuja_cement.pdf"
-    )
+    document_path = r"test_documents/tata_motors.pdf"
+    logger.info(f"Starting testing for {document_path}")
+    try:
+        transcript = get_document_transcript(filepath=document_path)
+        save_transcript(transcript, document_path)
 
-    dialogues = parse_conference_call(transcript_dict=transcript)
-    print(dialogues, indent=4)
+        dialogues = parse_conference_call(transcript=transcript)
+        logger.info("Parsed dialogues for %s \n\n", document_path)
+        save_output(dialogues, document_path, "output")
+    except Exception:
+        logger.exception("Something went really wrong")
