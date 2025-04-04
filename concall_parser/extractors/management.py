@@ -1,10 +1,15 @@
 import json
+
 from concall_parser.agents.extraction import ExtractManagement
-from concall_parser.log_config import logger
 from concall_parser.base_parser import BaseExtractor
+from concall_parser.log_config import logger
+
 
 class ManagementExtractor(BaseExtractor):
+    """Extracts management team from the input."""
+
     def extract(self, text: str) -> dict:
+        """Extracts management team from the input."""
         try:
             response = ExtractManagement.process(page_text=text)
             return json.loads(response)

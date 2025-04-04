@@ -1,17 +1,21 @@
 from collections import defaultdict
+
 from concall_parser.agents.classify import ClassifyModeratorIntent
 from concall_parser.utils.cleaner import clean_text
 
 
 class DialogueExtractor:
+    """Extracts dialogue from the input."""
+
     def __init__(self):
         self.speakers = {
             "moderator": ["moderator", "operator"],
             "management": [],
-            "analyst": []
+            "analyst": [],
         }
 
     def match_speaker(self, speaker: str) -> str:
+        """Matches the speaker to one of the three categories."""
         speaker = speaker.lower()
         if any(mod in speaker for mod in self.speakers["moderator"]):
             return "moderator"
@@ -22,6 +26,7 @@ class DialogueExtractor:
         return "management"  # default to management if unknown
 
     def extract(self, transcript: dict[int, str]) -> dict:
+        """Extracts dialogue from the input."""
         commentary_and_future_outlook = []
         analyst_discussion = defaultdict(lambda: {"name": "", "dialogue": []})
         end = []
@@ -43,12 +48,18 @@ class DialogueExtractor:
                 actual_speaker = self.match_speaker(speaker)
 
                 if actual_speaker == "moderator":
-                    intent = ClassifyModeratorIntent.process(dialogue=clean_dialogue).lower()
+                    intent = ClassifyModeratorIntent.process(
+                        dialogue=clean_dialogue
+                    ).lower()
 
                     if "opening" in intent or "future outlook" in intent:
-                        commentary_and_future_outlook.append({"speaker": speaker, "dialogue": clean_dialogue})
+                        commentary_and_future_outlook.append(
+                            {"speaker": speaker, "dialogue": clean_dialogue}
+                        )
                     elif "end" in intent:
-                        end.append({"speaker": speaker, "dialogue": clean_dialogue})
+                        end.append(
+                            {"speaker": speaker, "dialogue": clean_dialogue}
+                        )
                     previous_speaker = "moderator"
 
                 elif actual_speaker == "analyst":
@@ -66,11 +77,13 @@ class DialogueExtractor:
                             {"speaker": speaker, "dialogue": clean_dialogue}
                         )
                     else:
-                        commentary_and_future_outlook.append({"speaker": speaker, "dialogue": clean_dialogue})
+                        commentary_and_future_outlook.append(
+                            {"speaker": speaker, "dialogue": clean_dialogue}
+                        )
                     previous_speaker = "management"
 
         return {
             "commentary_and_future_outlook": commentary_and_future_outlook,
             "analyst_discussion": analyst_discussion,
-            "end": end
+            "end": end,
         }
