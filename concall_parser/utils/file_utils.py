@@ -3,7 +3,7 @@ import os
 
 import pdfplumber
 
-from concall_parser.log_config import logger
+from concall_parser.log_config import logger 
 
 
 def get_document_transcript(filepath: str) -> dict[int, str]:
