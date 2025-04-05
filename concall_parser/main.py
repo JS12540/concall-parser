@@ -3,18 +3,12 @@ import re
 
 from concall_parser.agents.check_moderator import CheckModerator
 from concall_parser.log_config import logger
-from concall_parser.management_only import handle_only_management_case
 from concall_parser.parser import ConferenceCallParser
-from concall_parser.utils.file_utils import (
-    get_document_transcript,
-    save_output,
-    save_transcript,
-)
 
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     """Extract management dialogues from text until the next speaker."""
-    extracted_dialogues = {} 
+    extracted_dialogues = {}
 
     # Create regex pattern to find each management member and what they spoke
     # extracts all management name and speech pairs in a given text
@@ -71,6 +65,42 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
     return dialogues
 
 
+def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[str]]:
+    """Extracts speaker names and their corresponding speeches from the transcript.
+
+    Args:
+        transcript: A dictionary where keys are page numbers (as strings) and
+            values are extracted text.
+
+    Returns:
+        speech_pair: A dictionary mapping speaker names to a list of their spoken segments.
+    """
+    all_speakers = set()
+    speech_pair: dict[str, list[str]] = {}
+
+    for _, text in transcript.items():
+        matches = re.findall(
+            r"([A-Z]\.\s)?([A-Za-z\s]+):\s(.*?)(?=\s[A-Z]\.?\s?[A-Za-z\s]+:\s|$)",
+            text,
+            re.DOTALL,
+        )
+
+        for initial, name, speech in matches:
+            speaker = (
+                f"{(initial or '').strip()} {name.strip()}".strip()
+            )  # Clean speaker name
+            speech = re.sub(r"\n", " ", speech).strip()  # Clean speech text
+
+            if speaker not in all_speakers:
+                all_speakers.add(speaker)
+                speech_pair[speaker] = []
+
+            speech_pair[speaker].append(speech)
+
+    logger.debug(f"Extracted Speakers: {all_speakers}")
+    return speech_pair
+
+
 def find_management_names(
     transcript: dict[int, str], parser: ConferenceCallParser
 ) -> tuple[list, dict[int, str]]:
@@ -123,17 +153,3 @@ def find_management_names(
 
     speaker_names = parser.extract_management_team(text=extracted_text)
     return speaker_names, transcript, management_found_page
-
-
-if __name__ == "__main__":
-    document_path = r"test_documents/tata_motors.pdf"
-    logger.info(f"Starting testing for {document_path}")
-    try:
-        transcript = get_document_transcript(filepath=document_path)
-        save_transcript(transcript, document_path)
-
-        dialogues = parse_conference_call(transcript=transcript)
-        logger.info("Parsed dialogues for %s \n\n", document_path)
-        save_output(dialogues, document_path, "output")
-    except Exception:
-        logger.exception("Something went really wrong")

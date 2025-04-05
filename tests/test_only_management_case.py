@@ -2,7 +2,7 @@ import json
 
 import pdfplumber
 
-from concall_parser.management_only import handle_only_management_case
+from concall_parser.main import handle_only_management_case
 
 
 def test_handle_only_management_case(filepath: str) -> None:

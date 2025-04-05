@@ -10,22 +10,25 @@ from concall_parser.utils.file_utils import (
 )
 
 FAILED_FILES_LOG = "failed_files.txt"
-SUCCESS_FILES_LOG = 'success_files.txt'
+SUCCESS_FILES_LOG = "success_files.txt"
 
 
 class TestChoices(Enum):
     """What kind of files to test."""
-    TEST_ALL='all'
-    TEST_FAILING = 'failing'
-    SKIP_SUCCESSFUL='skip'
+
+    TEST_ALL = "all"
+    TEST_FAILING = "failing"
+    SKIP_SUCCESSFUL = "skip"
 
 
-def process_single_file(filepath:str, path:str):
+def process_single_file(filepath: str, path: str):
     """Run a single file and save its output and log."""
+    logger.debug("Starting testing for %s", filepath)
     transcript = get_document_transcript(filepath)
     save_transcript(transcript, path, "raw_transcript")
 
     dialogues = parse_conference_call(transcript=transcript)
+    logger.debug("Parsed dialogues\n\n")
     save_output(dialogues, os.path.basename(path), "output")
 
 
@@ -43,13 +46,14 @@ def process_batch(test_dir_path: str, test_all: bool = False):
     if os.path.exists(FAILED_FILES_LOG):
         with open(FAILED_FILES_LOG) as file:
             error_files = file.readlines()
+    # TODO: make standard testing methods
     # if os.path.exists(SUCCESS_FILES_LOG):
     #     with open(SUCCESS_FILES_LOG) as file:
     #         success_files = file.readlines()
-    
-    failed = open(FAILED_FILES_LOG, 'w')
-    successful = open(SUCCESS_FILES_LOG, 'w')
-    
+
+    failed = open(FAILED_FILES_LOG, "w")
+    successful = open(SUCCESS_FILES_LOG, "w")
+
     if not test_all:
         files_to_test = error_files
     else:
@@ -61,14 +65,14 @@ def process_batch(test_dir_path: str, test_all: bool = False):
             filepath = os.path.join(test_dir_path, path)
             logger.info("Testing %s\n", path)
             process_single_file(filepath, path)
-            successful.write(path+'\n')
+            successful.write(path + "\n")
         except Exception:
-            failed.write(path+'\n')
+            failed.write(path + "\n")
             logger.exception(
-                "Error while processing file %s",
+                "Error while processing file %s", path
             )
             continue
-    
+
     failed.close()
     successful.close()
 
