@@ -1,8 +1,12 @@
 [tool.poetry]
 name = "concall-parser"
-version = "0.1.4"
+version = "0.1.3"
 description = ""
 authors = [
+    "Jay Shah <jayshah0726@gmail.com>",
+    "Pranshu Raj <pranshuraj65536@gmail.com>"
+]
+maintainers = [
     "Jay Shah <jayshah0726@gmail.com>",
     "Pranshu Raj <pranshuraj65536@gmail.com>"
 ]
