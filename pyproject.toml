@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "concall-parser"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Jay shah <jayshah0726@gmail.com>", "Pranshu Raj <pranshuraj65536@gmail.com>"]
 readme = "README.md"
