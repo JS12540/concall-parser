@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "concall-parser"
 version = "0.1.0"
-description = ""
-authors = ["Jay shah <jayshah0726@gmail.com>", "Pranshu Raj <pranshuraj65536@gmail.com>"]
+description = "A powerful parser for earnings conference calls that extracts structured insights including company and management details, commentary and future outlook, and analyst Q&A pairs."
+authors = [
+    "Jay Shah <jayshah0726@gmail.com>",
+    "Pranshu Raj <pranshuraj65536@gmail.com>"
+]
 readme = "README.md"
 packages = [
     { include = "concall_parser", from = "." },
@@ -10,6 +13,8 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
+groq = "0.15.0"
+pdfplumber = "0.11.5"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "0.4.1"

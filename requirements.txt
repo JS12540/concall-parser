@@ -1,2 +1,0 @@
-groq==0.15.0
-pdfplumber==0.11.5
