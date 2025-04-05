@@ -2,10 +2,10 @@
 name = "concall-parser"
 version = "0.1.0"
 description = ""
-authors = ["Jay shah <jayshah0726@gmail.com>"]
+authors = ["Jay shah <jayshah0726@gmail.com>", "Pranshu Raj <pranshuraj65536@gmail.com>"]
 readme = "README.md"
 packages = [
-    { include = "parser", from = "." },
+    { include = "concall_parser", from = "." },
 ]
 
 [tool.poetry.dependencies]

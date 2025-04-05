@@ -1,0 +1,47 @@
+name: Publish to TestPyPI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    name: Build and publish on TestPyPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install build twine requests
+
+      - name: Bump version using script
+        id: bump_version
+        run: python .github/scripts/update_version.py
+
+      - name: Commit and push new version
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git commit -am "CI: bump version to ${{ steps.bump_version.outputs.new_version }}"
+          git tag v${{ steps.bump_version.outputs.new_version }}
+          git push origin main --tags
+
+      - name: Build the package
+        run: python -m build
+
+      - name: Upload to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+        run: |
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
