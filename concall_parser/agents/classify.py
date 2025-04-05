@@ -1,4 +1,4 @@
-from concall_parser.constants import MODEL_NAME
+from concall_parser.utils.env_load import groq_model
 from concall_parser.utils.get_groq_responses import get_groq_response
 
 CONTEXT = """
@@ -77,6 +77,6 @@ class ClassifyModeratorIntent:
             {"role": "user", "content": dialogue},
         ]
 
-        response = get_groq_response(messages=messages, model=MODEL_NAME)
+        response = get_groq_response(messages=messages, model=groq_model)
 
         return response

@@ -1,5 +1,5 @@
-from concall_parser.constants import MODEL_NAME
 from concall_parser.log_config import logger
+from concall_parser.utils.env_load import groq_model
 from concall_parser.utils.get_groq_responses import get_groq_response
 
 # TODO: add second prompt case, for apollo (may be solved using regex but idk)
@@ -115,7 +115,7 @@ class ExtractManagement:
         # TODO: update data model of response in case of speaker selection
         # TODO: add company name fix in case of speaker selection
         try:
-            response = get_groq_response(messages=messages, model=MODEL_NAME)
+            response = get_groq_response(messages=messages, model=groq_model)
         except Exception:
             logger.exception("Could not get groq response for management extraction")
 

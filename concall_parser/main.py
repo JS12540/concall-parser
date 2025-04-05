@@ -14,11 +14,10 @@ from concall_parser.utils.file_utils import (
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     """Extract management dialogues from text until the next speaker."""
-    extracted_dialogues = {}  # To store extracted dialogues
+    extracted_dialogues = {} 
 
     # Create regex pattern to find each management member and what they spoke
     # extracts all management name and speech pairs in a given text
-    # ? but what if some other guy talks in between? is this handled beforehand?
     management_pattern = (
         r"("
         + "|".join(re.escape(name) for name in management_team.keys())
@@ -26,10 +25,8 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
         + "|".join(re.escape(name) for name in management_team.keys())
         + r")|$)"
     )
-    # ? what does finditer, group and dotall do
     matches = re.finditer(management_pattern, text, re.DOTALL)
 
-    # ? what is the input and output here - how are dialogues extracted? i need logs to understand
     for match in matches:
         speaker = match.group(1)
         dialogue = match.group(2).strip()
@@ -48,8 +45,6 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
 
     logger.info(f"management_team: {management_team}")
 
-    # Check if moderator exists
-    # Can't this be put inside that if? are we using this later?
     moderator_found = any("Moderator:" in text for text in transcript.values())
 
     if moderator_found:
@@ -111,7 +106,7 @@ def find_management_names(
             logger.info("Found management on page %s", management_found_page)
             break
 
-    # apollo case, ie. no management list given
+    # apollo case, ie. no management team given in first few pages
     if management_found_page == 0:
         # get all speakers from text
         logger.info("Found no management list, switching to regex search")
