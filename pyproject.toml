@@ -2,7 +2,10 @@
 name = "concall-parser"
 version = "0.1.2"
 description = ""
-authors = ["Jay shah <jayshah0726@gmail.com>", "Pranshu Raj <pranshuraj65536@gmail.com>"]
+authors = [
+    { name="Jay shah", email="jayshah0726@gmail.com"},
+    { name="Pranshu Raj", email="pranshuraj65536@gmail.com"},
+]
 readme = "README.md"
 packages = [
     { include = "concall_parser", from = "." },
