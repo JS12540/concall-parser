@@ -7,7 +7,7 @@ from concall_parser.extractors.dialogue_extractor import DialogueExtractor
 from concall_parser.extractors.management import ManagementExtractor
 
 
-class ConferenceCallParser:
+class ConcallParser:
     """Parses the conference call transcript."""
 
     def __init__(self):
