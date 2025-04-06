@@ -1,15 +1,23 @@
 [tool.poetry]
 name = "concall-parser"
-version = "0.1.0"
+version = "0.1.6"
 description = ""
-authors = ["Jay shah <jayshah0726@gmail.com>"]
+authors = [
+    "Jay Shah <jayshah0726@gmail.com>",
+    "Pranshu Raj <pranshuraj65536@gmail.com>"
+]
+maintainers = [
+    "Pranshu Raj <pranshuraj65536@gmail.com>"
+]
 readme = "README.md"
 packages = [
-    { include = "parser", from = "." },
+    { include = "concall_parser", from = "." },
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+groq = "0.15.0"
+pdfplumber = "0.11.5"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "0.4.1"
