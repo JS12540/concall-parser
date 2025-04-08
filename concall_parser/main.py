@@ -3,7 +3,7 @@ import re
 
 from concall_parser.agents.check_moderator import CheckModerator
 from concall_parser.log_config import logger
-from concall_parser.parser import ConferenceCallParser
+from concall_parser.parser import ConcallParser
 
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
@@ -31,7 +31,7 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
 
 def parse_conference_call(transcript: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
-    parser = ConferenceCallParser()
+    parser = ConcallParser()
     # Extract company name and management team
     management_team, transcript, management_found_page = find_management_names(
         transcript=transcript, parser=parser
@@ -42,7 +42,7 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
     moderator_found = any("Moderator:" in text for text in transcript.values())
 
     if moderator_found:
-        dialogues = parser.extract_dialogues(transcript)
+        dialogues = parser.dialogue_extractor.extract(transcript)
     else:
         logger.info("No moderator found, extracting name from text")
         moderator_name = json.loads(
@@ -102,7 +102,7 @@ def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[st
 
 
 def find_management_names(
-    transcript: dict[int, str], parser: ConferenceCallParser
+    transcript: dict[int, str], parser: ConcallParser
 ) -> tuple[list, dict[int, str]]:
     """Checks if the names of management team are present in the text or not.
 

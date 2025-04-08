@@ -21,15 +21,15 @@ class TestChoices(Enum):
     SKIP_SUCCESSFUL = "skip"
 
 
-def process_single_file(filepath: str, path: str):
+def process_single_file(filepath: str, output_path: str):
     """Run a single file and save its output and log."""
     logger.debug("Starting testing for %s", filepath)
     transcript = get_document_transcript(filepath)
-    save_transcript(transcript, path, "raw_transcript")
+    save_transcript(transcript, output_path, "raw_transcript")
 
     dialogues = parse_conference_call(transcript=transcript)
     logger.debug("Parsed dialogues\n\n")
-    save_output(dialogues, os.path.basename(path), "output")
+    save_output(dialogues, os.path.basename(output_path), "output")
 
 
 def process_batch(test_dir_path: str, test_all: bool = False):
@@ -78,4 +78,5 @@ def process_batch(test_dir_path: str, test_all: bool = False):
 
 
 if __name__ == "__main__":
-    process_batch("test_documents", test_all=True)
+    process_single_file('test_documents/ambuja_cement.pdf', 'ambuja_cement')
+    # process_batch("test_documents", test_all=True)

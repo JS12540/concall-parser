@@ -35,5 +35,5 @@ if __name__ == "__main__":
     test_single_file_processing(
         filepath="test_documents/ambuja_cement.pdf",
         output_dir="output/ambuja_cement",
-        expected_output_dir="backend/tests/parsed_correct/ambuja_cement",
+        expected_output_dir="tests/parsed_correct/ambuja_cement",
     )
