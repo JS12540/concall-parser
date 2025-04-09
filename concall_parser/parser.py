@@ -55,8 +55,12 @@ class ConcallParser:
 
     def extract_commentary(self, transcript: dict[int, str]) -> list:
         """Extracts commentary from the input."""
-        dialogues = self.dialogue_extractor.extract(transcript)
-        return dialogues["commentary_and_future_outlook"]
+        response = (
+            self.dialogue_extractor.extract_commentary_and_future_outlook(
+                transcript=transcript
+            )
+        )
+        return response
 
     def extract_analyst_discussion(self, transcript: dict[int, str]) -> dict:
         """Extracts analyst discussion from the input."""

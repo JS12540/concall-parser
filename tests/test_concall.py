@@ -13,6 +13,10 @@ def process_single_file(filepath: str):
 
     print(f"Management_team : {management_team}")
 
+    commentary = parser.extract_commentary(transcript=transcript_dict)
+
+    print(f"Commentary : {commentary}")
+
 
 if __name__ == "__main__":
-    process_single_file("test_documents\skf_india.pdf")
+    process_single_file(r"test_documents\skf_india.pdf")
