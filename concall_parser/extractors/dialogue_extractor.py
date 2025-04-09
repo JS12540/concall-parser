@@ -17,11 +17,15 @@ class DialogueExtractor:
     def match_speaker(self, speaker: str) -> str:
         """Matches the speaker to one of the three categories."""
         speaker = speaker.lower()
-        if any(mod in speaker for mod in self.speakers["moderator"]):
+        if any(
+            moderator in speaker for moderator in self.speakers["moderator"]
+        ):
             return "moderator"
-        elif any(ana in speaker for ana in self.speakers["analyst"]):
+        elif any(analyst in speaker for analyst in self.speakers["analyst"]):
             return "analyst"
-        elif any(mgmt in speaker for mgmt in self.speakers["management"]):
+        elif any(
+            management in speaker for management in self.speakers["management"]
+        ):
             return "management"
         return "management"  # default to management if unknown
 

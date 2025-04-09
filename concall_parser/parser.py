@@ -1,29 +1,57 @@
+import pdfplumber
+
 from concall_parser.extractors.analyst_dicussion import (
     AnalystDiscussionExtractor,
 )
 from concall_parser.extractors.commentary import CommentaryExtractor
-from concall_parser.extractors.company import CompanyNameExtractor
 from concall_parser.extractors.dialogue_extractor import DialogueExtractor
-from concall_parser.extractors.management import ManagementExtractor
+from concall_parser.extractors.management import CompanyAndManagementExtractor
+from concall_parser.log_config import logger
 
 
 class ConcallParser:
     """Parses the conference call transcript."""
 
     def __init__(self):
-        self.company_extractor = CompanyNameExtractor()
-        self.management_extractor = ManagementExtractor()
+        self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.commentary_extractor = CommentaryExtractor()
         self.analyst_extractor = AnalystDiscussionExtractor()
         self.dialogue_extractor = DialogueExtractor()
 
-    def extract_company_name(self, text: str) -> str:
-        """Extracts the company name from the text."""
-        return self.company_extractor.extract(text)
+    def get_document_transcript(self, filepath: str) -> dict[int, str]:
+        """Extracts text of a pdf document.
 
-    def extract_management_team(self, text: str) -> dict:
+        Args:
+            filepath: Path to the pdf file whose text needs to be extracted.
+
+        Returns:
+            transcript: Dictionary of page number, page text pair.
+        """
+        transcript = {}
+        try:
+            with pdfplumber.open(filepath) as pdf:
+                logger.debug("Loaded document")
+                page_number = 1
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        transcript[page_number] = text
+                        page_number += 1
+            return transcript
+        except Exception:
+            logger.exception("Could not load file %s", filepath)
+
+    def extract_management_team(self, transcript: dict[int, str]) -> dict:
         """Extracts the management team from the text."""
-        return self.management_extractor.extract(text)
+        extracted_text = ""
+        for page_number, text in transcript.items():
+            if page_number <= 2:
+                extracted_text += text
+            else:
+                break
+        return self.company_and_management_extractor.extract(
+            text=extracted_text
+        )
 
     def extract_commentary(self, transcript: dict[int, str]) -> list:
         """Extracts commentary from the input."""

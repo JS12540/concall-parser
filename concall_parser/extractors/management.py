@@ -5,7 +5,7 @@ from concall_parser.base_parser import BaseExtractor
 from concall_parser.log_config import logger
 
 
-class ManagementExtractor(BaseExtractor):
+class CompanyAndManagementExtractor(BaseExtractor):
     """Extracts management team from the input."""
 
     def extract(self, text: str) -> dict:
