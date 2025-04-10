@@ -17,6 +17,12 @@ def process_single_file(filepath: str):
 
     print(f"Commentary : {commentary}")
 
+    analyst_discussion = parser.extract_analyst_discussion(
+        transcript=transcript_dict
+    )
+
+    print(f"Analyst_discussion : {analyst_discussion}")
+
 
 if __name__ == "__main__":
     process_single_file(r"test_documents\skf_india.pdf")
