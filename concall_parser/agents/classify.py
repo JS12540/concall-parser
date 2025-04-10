@@ -1,4 +1,3 @@
-from concall_parser.utils.env_load import groq_model
 from concall_parser.utils.get_groq_responses import get_groq_response
 
 CONTEXT = """
@@ -63,11 +62,12 @@ class ClassifyModeratorIntent:
     """Classify moderator statements into categories."""
 
     @staticmethod
-    def process(dialogue):
+    def process(dialogue: str, groq_model: str):
         """Classify a moderator statement into one of the three categories.
 
         Args:
             dialogue (str): The moderator's statement to be classified
+            groq_model (str): The model to use for groq
 
         Returns:
             str: The classified category

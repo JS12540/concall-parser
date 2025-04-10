@@ -8,10 +8,12 @@ from concall_parser.log_config import logger
 class CompanyAndManagementExtractor(BaseExtractor):
     """Extracts management team from the input."""
 
-    def extract(self, text: str) -> dict:
+    def extract(self, text: str, groq_model: str) -> dict:
         """Extracts management team from the input."""
         try:
-            response = ExtractManagement.process(page_text=text)
+            response = ExtractManagement.process(
+                page_text=text, groq_model=groq_model
+            )
             return json.loads(response)
         except Exception:
             logger.exception("Failed to extract management team.")

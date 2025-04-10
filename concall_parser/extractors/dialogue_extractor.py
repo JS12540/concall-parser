@@ -38,7 +38,7 @@ class DialogueExtractor:
         return "management"  # default to management if unknown
 
     def extract_commentary_and_future_outlook(
-        self, transcript: dict[int, str]
+        self, transcript: dict[int, str], groq_model: str
     ) -> dict:
         """Extracts commentary and future outlook from the input."""
         dialogues = {
@@ -82,7 +82,8 @@ class DialogueExtractor:
                         "Moderator statement found, giving it for classification"
                     )
                     response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue
+                        dialogue=dialogue,
+                        groq_model=groq_model,
                     )
                     response = json.loads(response)
                     logger.info(
@@ -110,7 +111,9 @@ class DialogueExtractor:
                 else:
                     return dialogues["commentary_and_future_outlook"]
 
-    def extract_dialogues(self, transcript_dict: dict[int, str]) -> dict:
+    def extract_dialogues(
+        self, transcript_dict: dict[int, str], groq_model: str
+    ) -> dict:
         """Extract dialogues and classify stages."""
         dialogues = {
             "commentary_and_future_outlook": [],
@@ -181,7 +184,8 @@ class DialogueExtractor:
                         "Moderator statement found, giving it for classification"
                     )
                     response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue
+                        dialogue=dialogue,
+                        groq_model=groq_model,
                     )
                     response = json.loads(response)
                     logger.info(

@@ -1,5 +1,4 @@
 from concall_parser.log_config import logger
-from concall_parser.utils.env_load import groq_model
 from concall_parser.utils.get_groq_responses import get_groq_response
 
 # TODO: add second prompt case, for apollo (may be solved using regex but idk)
@@ -88,13 +87,13 @@ class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
     @staticmethod
-    def process(page_text: str) -> str:
+    def process(page_text: str, groq_model: str) -> str:
         """Process the given page text to extract relevant management information.
 
         Args:
             page_text (str): The text content of a page from which management
                 information will be extracted.
-            speakers (list[str]): List of speakers extracted in Apollo case.
+            groq_model (str): The model to use for Groq queries.
 
         Returns:
             None

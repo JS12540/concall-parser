@@ -1,9 +1,6 @@
 import pdfplumber
 
-from concall_parser.extractors.analyst_dicussion import (
-    AnalystDiscussionExtractor,
-)
-from concall_parser.extractors.commentary import CommentaryExtractor
+from concall_parser.config import get_groq_api_key, get_groq_model
 from concall_parser.extractors.dialogue_extractor import DialogueExtractor
 from concall_parser.extractors.management import CompanyAndManagementExtractor
 from concall_parser.log_config import logger
@@ -13,9 +10,11 @@ class ConcallParser:
     """Parses the conference call transcript."""
 
     def __init__(self):
+        # Ensure Groq API key is set and get model
+        self.groq_api_key = get_groq_api_key()
+        self.groq_model = get_groq_model()
+
         self.company_and_management_extractor = CompanyAndManagementExtractor()
-        self.commentary_extractor = CommentaryExtractor()
-        self.analyst_extractor = AnalystDiscussionExtractor()
         self.dialogue_extractor = DialogueExtractor()
 
     def get_document_transcript(self, filepath: str) -> dict[int, str]:
@@ -50,7 +49,8 @@ class ConcallParser:
             else:
                 break
         return self.company_and_management_extractor.extract(
-            text=extracted_text
+            text=extracted_text,
+            groq_model=self.groq_model,
         )
 
     def extract_commentary(self, transcript: dict[int, str]) -> list:
