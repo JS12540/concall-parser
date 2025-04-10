@@ -69,21 +69,13 @@ class ConcallParser:
         )
         return dialogues["analyst_discussion"]
 
-    def extract_all(
-        self, transcript: dict[int, str], first_page_text: str | None = None
-    ) -> dict:
+    def extract_all(self, transcript: dict[int, str]) -> dict:
         """Extracts all information from the input."""
-        dialogues = self.dialogue_extractor.extract(transcript)
+        management = self.extract_management_team(transcript=transcript)
+        commentary = self.extract_commentary(transcript=transcript)
+        analyst = self.extract_analyst_discussion(transcript=transcript)
         return {
-            "company_name": self.company_extractor.extract(
-                first_page_text or ""
-            ),
-            "management_team": self.management_extractor.extract(
-                first_page_text or ""
-            ),
-            "commentary_and_future_outlook": dialogues[
-                "commentary_and_future_outlook"
-            ],
-            "analyst_discussion": dialogues["analyst_discussion"],
-            "end": dialogues["end"],
+            "management": management,
+            "commentary": commentary,
+            "analyst": analyst,
         }
