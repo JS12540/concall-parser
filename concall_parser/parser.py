@@ -57,7 +57,8 @@ class ConcallParser:
         """Extracts commentary from the input."""
         response = (
             self.dialogue_extractor.extract_commentary_and_future_outlook(
-                transcript=transcript
+                transcript=transcript,
+                groq_model=self.groq_model,
             )
         )
         return response
@@ -65,7 +66,8 @@ class ConcallParser:
     def extract_analyst_discussion(self, transcript: dict[int, str]) -> dict:
         """Extracts analyst discussion from the input."""
         dialogues = self.dialogue_extractor.extract_dialogues(
-            transcript_dict=transcript
+            transcript_dict=transcript,
+            groq_model=self.groq_model,
         )
         return dialogues["analyst_discussion"]
 
