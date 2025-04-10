@@ -1,6 +1,6 @@
 import filecmp
 
-from backend.tests.test_parsing import process_single_file
+from tests.test_parsing import process_single_file
 
 
 def compare_folders(output, expected):
@@ -30,9 +30,10 @@ def test_multiple_files_processing(input_files, output_dir, expected_output_dirs
         test_single_file_processing(input_file, output_dir, expected_output_dir)
 
 
+# TODO: upgrade to pytest-regressions
 if __name__ == "__main__":
     test_single_file_processing(
         filepath="test_documents/ambuja_cement.pdf",
         output_dir="output/ambuja_cement",
-        expected_output_dir="backend/tests/parsed_correct/ambuja_cement",
+        expected_output_dir="tests/parsed_correct/ambuja_cement",
     )

@@ -3,22 +3,15 @@ import re
 
 from concall_parser.agents.check_moderator import CheckModerator
 from concall_parser.log_config import logger
-from concall_parser.management_only import handle_only_management_case
-from concall_parser.parser import ConferenceCallParser
-from concall_parser.utils.file_utils import (
-    get_document_transcript,
-    save_output,
-    save_transcript,
-)
+from concall_parser.parser import ConcallParser
 
 
 def extract_management_team_from_text(text: str, management_team: dict) -> dict:
     """Extract management dialogues from text until the next speaker."""
-    extracted_dialogues = {}  # To store extracted dialogues
+    extracted_dialogues = {}
 
     # Create regex pattern to find each management member and what they spoke
     # extracts all management name and speech pairs in a given text
-    # ? but what if some other guy talks in between? is this handled beforehand?
     management_pattern = (
         r"("
         + "|".join(re.escape(name) for name in management_team.keys())
@@ -26,10 +19,8 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
         + "|".join(re.escape(name) for name in management_team.keys())
         + r")|$)"
     )
-    # ? what does finditer, group and dotall do
     matches = re.finditer(management_pattern, text, re.DOTALL)
 
-    # ? what is the input and output here - how are dialogues extracted? i need logs to understand
     for match in matches:
         speaker = match.group(1)
         dialogue = match.group(2).strip()
@@ -40,7 +31,7 @@ def extract_management_team_from_text(text: str, management_team: dict) -> dict:
 
 def parse_conference_call(transcript: dict[int, str]) -> dict:
     """Main function to parse and print conference call information."""
-    parser = ConferenceCallParser()
+    parser = ConcallParser()
     # Extract company name and management team
     management_team, transcript, management_found_page = find_management_names(
         transcript=transcript, parser=parser
@@ -48,12 +39,10 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
 
     logger.info(f"management_team: {management_team}")
 
-    # Check if moderator exists
-    # Can't this be put inside that if? are we using this later?
     moderator_found = any("Moderator:" in text for text in transcript.values())
 
     if moderator_found:
-        dialogues = parser.extract_dialogues(transcript)
+        dialogues = parser.dialogue_extractor.extract(transcript)
     else:
         logger.info("No moderator found, extracting name from text")
         moderator_name = json.loads(
@@ -76,8 +65,44 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
     return dialogues
 
 
+def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[str]]:
+    """Extracts speaker names and their corresponding speeches from the transcript.
+
+    Args:
+        transcript: A dictionary where keys are page numbers (as strings) and
+            values are extracted text.
+
+    Returns:
+        speech_pair: A dictionary mapping speaker names to a list of their spoken segments.
+    """
+    all_speakers = set()
+    speech_pair: dict[str, list[str]] = {}
+
+    for _, text in transcript.items():
+        matches = re.findall(
+            r"([A-Z]\.\s)?([A-Za-z\s]+):\s(.*?)(?=\s[A-Z]\.?\s?[A-Za-z\s]+:\s|$)",
+            text,
+            re.DOTALL,
+        )
+
+        for initial, name, speech in matches:
+            speaker = (
+                f"{(initial or '').strip()} {name.strip()}".strip()
+            )  # Clean speaker name
+            speech = re.sub(r"\n", " ", speech).strip()  # Clean speech text
+
+            if speaker not in all_speakers:
+                all_speakers.add(speaker)
+                speech_pair[speaker] = []
+
+            speech_pair[speaker].append(speech)
+
+    logger.debug(f"Extracted Speakers: {all_speakers}")
+    return speech_pair
+
+
 def find_management_names(
-    transcript: dict[int, str], parser: ConferenceCallParser
+    transcript: dict[int, str], parser: ConcallParser
 ) -> tuple[list, dict[int, str]]:
     """Checks if the names of management team are present in the text or not.
 
@@ -111,7 +136,7 @@ def find_management_names(
             logger.info("Found management on page %s", management_found_page)
             break
 
-    # apollo case, ie. no management list given
+    # apollo case, ie. no management team given in first few pages
     if management_found_page == 0:
         # get all speakers from text
         logger.info("Found no management list, switching to regex search")
@@ -128,17 +153,3 @@ def find_management_names(
 
     speaker_names = parser.extract_management_team(text=extracted_text)
     return speaker_names, transcript, management_found_page
-
-
-if __name__ == "__main__":
-    document_path = r"test_documents/tata_motors.pdf"
-    logger.info(f"Starting testing for {document_path}")
-    try:
-        transcript = get_document_transcript(filepath=document_path)
-        save_transcript(transcript, document_path)
-
-        dialogues = parse_conference_call(transcript=transcript)
-        logger.info("Parsed dialogues for %s \n\n", document_path)
-        save_output(dialogues, document_path, "output")
-    except Exception:
-        logger.exception("Something went really wrong")

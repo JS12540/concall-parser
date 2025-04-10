@@ -1,5 +1,0 @@
-import os
-
-mongo_uri = os.environ.get("MONGO_URI")
-groq_api_key = os.environ.get("GROQ_API_KEY")
-# groq_model = os.environ.get("GROQ_MODEL")

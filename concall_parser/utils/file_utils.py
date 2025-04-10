@@ -2,6 +2,7 @@ import json
 import os
 
 import pdfplumber
+import requests
 
 from concall_parser.log_config import logger
 
@@ -44,7 +45,9 @@ def save_output(
         document_name (str): Name of the file being parsed, corresponds to company name for now.
     """
     for dialogue_type, dialogue in dialogues.items():
-        output_dir_path = os.path.join(output_base_path, os.path.basename(document_name)[:-4])
+        output_dir_path = os.path.join(
+            output_base_path, os.path.basename(document_name)[:-4]
+        )
         os.makedirs(output_dir_path, exist_ok=True)
         with open(
             os.path.join(output_dir_path, f"{dialogue_type}.json"), "w"
@@ -77,3 +80,33 @@ def save_transcript(
         logger.info("Saved transcript text to file\n")
     except Exception:
         logger.exception("Could not save document transcript")
+
+
+def get_transcript_from_link(link:str) -> dict[int, str]:
+    """Extracts transcript by downloading pdf from a given link.
+    
+    Args:
+        link: Link to the pdf document of earnings call report.
+        
+    Returns:
+        transcript: A page number-page text mapping.
+    
+    Raises:
+        Http error, if encountered during downloading document.
+    """
+    try:
+        logger.debug("Request to get transcript from link.")
+        response = requests.get(url=link, timeout=30, stream=True)
+        response.raise_for_status()
+
+        temp_doc_path = "temp_document.pdf"
+        with open(temp_doc_path, 'wb') as temp_pdf:
+            for chunk in response.iter_content(chunk_size=8192):
+                temp_pdf.write(chunk)
+        transcript = get_document_transcript(filepath=temp_doc_path)
+        os.remove(temp_doc_path)
+
+        return transcript
+    except Exception:
+        logger.exception("Could not get transcript from link")
+        return dict()

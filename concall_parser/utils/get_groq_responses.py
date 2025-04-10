@@ -1,9 +1,9 @@
 from groq import APIStatusError, Groq
 
-from concall_parser.constants import GROQ_API_KEY
+from concall_parser.config import get_groq_api_key
 from concall_parser.log_config import logger
 
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=get_groq_api_key())
 
 
 def get_groq_response(messages, model):
