@@ -1,5 +1,3 @@
-import pdfplumber
-
 from concall_parser.config import get_groq_api_key, get_groq_model
 from concall_parser.extractors.dialogue_extractor import DialogueExtractor
 from concall_parser.extractors.management import CompanyAndManagementExtractor
@@ -7,6 +5,10 @@ from concall_parser.extractors.management_case_extractor import (
     ManagementCaseExtractor,
 )
 from concall_parser.log_config import logger
+from concall_parser.utils.file_utils import (
+    get_document_transcript,
+    get_transcript_from_link,
+)
 
 
 class ConcallParser:
@@ -21,28 +23,24 @@ class ConcallParser:
         self.dialogue_extractor = DialogueExtractor()
         self.management_case_extractor = ManagementCaseExtractor()
 
-    def get_document_transcript(self, filepath: str) -> dict[int, str]:
+    def _get_document_transcript(self, path: str) -> dict[int, str]:
         """Extracts text of a pdf document.
 
         Args:
-            filepath: Path to the pdf file whose text needs to be extracted.
+            path: Link of Filepath to the pdf file whose text needs to be extracted.
 
         Returns:
             transcript: Dictionary of page number, page text pair.
         """
-        transcript = {}
+        transcript = dict()
         try:
-            with pdfplumber.open(filepath) as pdf:
-                logger.debug("Loaded document")
-                page_number = 1
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        transcript[page_number] = text
-                        page_number += 1
+            if path.startswith('http'):
+                transcript = get_transcript_from_link(link=path)
+            else:
+                transcript = get_document_transcript(filepath=path)
             return transcript
         except Exception:
-            logger.exception("Could not load file %s", filepath)
+            logger.exception("Could not load file %s", path)
 
     def extract_management_team(self, transcript: dict[int, str]) -> dict:
         """Extracts the management team from the text."""
