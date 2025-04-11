@@ -3,6 +3,9 @@ import pdfplumber
 from concall_parser.config import get_groq_api_key, get_groq_model
 from concall_parser.extractors.dialogue_extractor import DialogueExtractor
 from concall_parser.extractors.management import CompanyAndManagementExtractor
+from concall_parser.extractors.management_case_extractor import (
+    ManagementCaseExtractor,
+)
 from concall_parser.log_config import logger
 
 
@@ -16,6 +19,7 @@ class ConcallParser:
 
         self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.dialogue_extractor = DialogueExtractor()
+        self.management_case_extractor = ManagementCaseExtractor()
 
     def get_document_transcript(self, filepath: str) -> dict[int, str]:
         """Extracts text of a pdf document.
@@ -55,13 +59,17 @@ class ConcallParser:
 
     def extract_commentary(self, transcript: dict[int, str]) -> list:
         """Extracts commentary from the input."""
-        response = (
-            self.dialogue_extractor.extract_commentary_and_future_outlook(
-                transcript=transcript,
-                groq_model=self.groq_model,
-            )
+        response = self.dialogue_extractor.extract_commentary_and_future_outlook(
+            transcript=transcript,
+            groq_model=self.groq_model,
         )
         return response
+
+    def handle_only_management_case(
+        self, transcript: dict[str, str]
+    ) -> dict[str, list[str]]:
+        """Extracts dialogue where moderator is not present."""
+        return self.management_case_extractor.extract(transcript)
 
     def extract_analyst_discussion(self, transcript: dict[int, str]) -> dict:
         """Extracts analyst discussion from the input."""

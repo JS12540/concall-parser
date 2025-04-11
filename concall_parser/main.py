@@ -65,41 +65,6 @@ def parse_conference_call(transcript: dict[int, str]) -> dict:
     return dialogues
 
 
-def handle_only_management_case(transcript: dict[str, str]) -> dict[str, list[str]]:
-    """Extracts speaker names and their corresponding speeches from the transcript.
-
-    Args:
-        transcript: A dictionary where keys are page numbers (as strings) and
-            values are extracted text.
-
-    Returns:
-        speech_pair: A dictionary mapping speaker names to a list of their spoken segments.
-    """
-    all_speakers = set()
-    speech_pair: dict[str, list[str]] = {}
-
-    for _, text in transcript.items():
-        matches = re.findall(
-            r"([A-Z]\.\s)?([A-Za-z\s]+):\s(.*?)(?=\s[A-Z]\.?\s?[A-Za-z\s]+:\s|$)",
-            text,
-            re.DOTALL,
-        )
-
-        for initial, name, speech in matches:
-            speaker = (
-                f"{(initial or '').strip()} {name.strip()}".strip()
-            )  # Clean speaker name
-            speech = re.sub(r"\n", " ", speech).strip()  # Clean speech text
-
-            if speaker not in all_speakers:
-                all_speakers.add(speaker)
-                speech_pair[speaker] = []
-
-            speech_pair[speaker].append(speech)
-
-    logger.debug(f"Extracted Speakers: {all_speakers}")
-    return speech_pair
-
 
 def find_management_names(
     transcript: dict[int, str], parser: ConcallParser
@@ -140,7 +105,7 @@ def find_management_names(
     if management_found_page == 0:
         # get all speakers from text
         logger.info("Found no management list, switching to regex search")
-        speakers = handle_only_management_case(transcript=transcript).keys()
+        speakers = parser.handle_only_management_case(transcript=transcript).keys()
         extracted_text = transcript.get(1, "") + "\n" + "\n".join(speakers)
         # pass in the first page(for company name), all extracted speakers separated by \n
         speaker_names = parser.extract_management_team(text=extracted_text)
