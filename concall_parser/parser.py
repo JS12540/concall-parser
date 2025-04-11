@@ -18,29 +18,38 @@ class ConcallParser:
         # Ensure Groq API key is set and get model
         self.groq_api_key = get_groq_api_key()
         self.groq_model = get_groq_model()
+        self.transcript = dict()
 
         self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.dialogue_extractor = DialogueExtractor()
         self.management_case_extractor = ManagementCaseExtractor()
 
-    def _get_document_transcript(self, path: str) -> dict[int, str]:
+    def _get_document_transcript(self, filepath:str, link:str) -> dict[int, str]:
         """Extracts text of a pdf document.
 
+        Takes in a filepath (locally stored document) or link (online doc) to extract document 
+        transcript.
+
         Args:
-            path: Link of Filepath to the pdf file whose text needs to be extracted.
+            filepath: Path to the pdf file whose text needs to be extracted.
+            link: Link to concall pdf.
 
         Returns:
             transcript: Dictionary of page number, page text pair.
+
+        Raises:
+            Exception in case neither of filepath or link are provided.
         """
-        transcript = dict()
+        if not (filepath or link):
+            raise Exception("Document source cannot be empty.")
         try:
-            if path.startswith('http'):
-                transcript = get_transcript_from_link(link=path)
+            if link:
+                self.transcript = get_transcript_from_link(link=link)
             else:
-                transcript = get_document_transcript(filepath=path)
-            return transcript
+                self.transcript = get_document_transcript(filepath=filepath)
+            return self.transcript
         except Exception:
-            logger.exception("Could not load file %s", path)
+            logger.exception("Could not load file")
 
     def extract_management_team(self, transcript: dict[int, str]) -> dict:
         """Extracts the management team from the text."""
