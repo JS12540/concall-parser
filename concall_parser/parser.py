@@ -4,7 +4,6 @@ from concall_parser.extractors.management import CompanyAndManagementExtractor
 from concall_parser.extractors.management_case_extractor import (
     ManagementCaseExtractor,
 )
-from concall_parser.log_config import logger
 from concall_parser.utils.file_utils import (
     get_document_transcript,
     get_transcript_from_link,
@@ -24,10 +23,10 @@ class ConcallParser:
         self.dialogue_extractor = DialogueExtractor()
         self.management_case_extractor = ManagementCaseExtractor()
 
-    def _get_document_transcript(self, filepath:str, link:str) -> dict[int, str]:
+    def _get_document_transcript(self, filepath: str, link: str) -> dict[int, str]:
         """Extracts text of a pdf document.
 
-        Takes in a filepath (locally stored document) or link (online doc) to extract document 
+        Takes in a filepath (locally stored document) or link (online doc) to extract document
         transcript.
 
         Args:
@@ -42,19 +41,17 @@ class ConcallParser:
         """
         if not (filepath or link):
             raise Exception("Document source cannot be empty.")
-        try:
-            if link:
-                self.transcript = get_transcript_from_link(link=link)
-            else:
-                self.transcript = get_document_transcript(filepath=filepath)
-            return self.transcript
-        except Exception:
-            logger.exception("Could not load file")
 
-    def extract_management_team(self, transcript: dict[int, str]) -> dict:
+        if link:
+            self.transcript = get_transcript_from_link(link=link)
+        else:
+            self.transcript = get_document_transcript(filepath=filepath)
+        return self.transcript
+
+    def extract_management_team(self) -> dict:
         """Extracts the management team from the text."""
         extracted_text = ""
-        for page_number, text in transcript.items():
+        for page_number, text in self.transcript.items():
             if page_number <= 2:
                 extracted_text += text
             else:
@@ -64,33 +61,31 @@ class ConcallParser:
             groq_model=self.groq_model,
         )
 
-    def extract_commentary(self, transcript: dict[int, str]) -> list:
+    def extract_commentary(self) -> list:
         """Extracts commentary from the input."""
         response = self.dialogue_extractor.extract_commentary_and_future_outlook(
-            transcript=transcript,
+            transcript=self.transcript,
             groq_model=self.groq_model,
         )
         return response
 
-    def handle_only_management_case(
-        self, transcript: dict[str, str]
-    ) -> dict[str, list[str]]:
+    def handle_only_management_case(self) -> dict[str, list[str]]:
         """Extracts dialogue where moderator is not present."""
-        return self.management_case_extractor.extract(transcript)
+        return self.management_case_extractor.extract(self.transcript)
 
-    def extract_analyst_discussion(self, transcript: dict[int, str]) -> dict:
+    def extract_analyst_discussion(self) -> dict:
         """Extracts analyst discussion from the input."""
         dialogues = self.dialogue_extractor.extract_dialogues(
-            transcript_dict=transcript,
+            transcript_dict=self.transcript,
             groq_model=self.groq_model,
         )
         return dialogues["analyst_discussion"]
 
-    def extract_all(self, transcript: dict[int, str]) -> dict:
+    def extract_all(self) -> dict:
         """Extracts all information from the input."""
-        management = self.extract_management_team(transcript=transcript)
-        commentary = self.extract_commentary(transcript=transcript)
-        analyst = self.extract_analyst_discussion(transcript=transcript)
+        management = self.extract_management_team(transcript=self.transcript)
+        commentary = self.extract_commentary(transcript=self.transcript)
+        analyst = self.extract_analyst_discussion(transcript=self.transcript)
         return {
             "management": management,
             "commentary": commentary,
