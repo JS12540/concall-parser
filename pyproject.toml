@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "concall-parser"
 version = "0.1.9"
-description = ""
+description = "A parser for extracting analyst discussion and management commentary efficiently from concalls."
 authors = [
     "Jay Shah <jayshah0726@gmail.com>",
     "Pranshu Raj <pranshuraj65536@gmail.com>"
