@@ -43,9 +43,6 @@ class DialogueExtractor:
                             : first_speaker_match.start()
                         ].strip()
                         if leftover_text and last_speaker is not None:
-                            logger.info(
-                                f"Appending leftover text to {last_speaker}"
-                            )
                             if current_analyst:
                                 dialogues["analyst_discussion"][
                                     current_analyst
@@ -71,7 +68,7 @@ class DialogueExtractor:
                         if current_analyst:
                             dialogues["analyst_discussion"][current_analyst][
                                 "dialogue"
-                            ][-1]["dialogue"] += " " + leftover_text
+                            ][-1]["dialogue"] += " " + text
                         else:
                             if (
                                 len(dialogues["commentary_and_future_outlook"])
@@ -79,7 +76,8 @@ class DialogueExtractor:
                             ):
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += " " + leftover_text
+                                ] += " " + text
+                        continue
 
             matches = self.speaker_pattern.finditer(text)
 
