@@ -1,7 +1,7 @@
 import logging
 
 logger = logging.Logger("concall_logger")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 stream_handler = logging.StreamHandler()
 file_handler = logging.FileHandler(filename='app.log', mode='w')

@@ -1,3 +1,5 @@
+import json
+
 from concall_parser.log_config import logger
 from concall_parser.parser import ConcallParser
 
@@ -8,7 +10,7 @@ def process_single_file(path: str):
     parser = ConcallParser(link=path)
 
     extracted = parser.extract_all()
-    print(f"Extracted all: {extracted}")
+    logger.info(f"Extracted info: {json.dumps(extracted, indent=4)}")
 
 
 if __name__ == "__main__":
