@@ -1,49 +1,63 @@
-import pdfplumber
-
 from concall_parser.config import get_groq_api_key, get_groq_model
 from concall_parser.extractors.dialogue_extractor import DialogueExtractor
 from concall_parser.extractors.management import CompanyAndManagementExtractor
-from concall_parser.log_config import logger
+from concall_parser.extractors.management_case_extractor import (
+    ManagementCaseExtractor,
+)
+from concall_parser.utils.file_utils import (
+    get_document_transcript,
+    get_transcript_from_link,
+)
 
 
 class ConcallParser:
     """Parses the conference call transcript."""
 
-    def __init__(self):
+    def __init__(self, path: str = None, link: str = None):
         # Ensure Groq API key is set and get model
+        self.transcript = self._get_document_transcript(
+            filepath=path, link=link
+        )
         self.groq_api_key = get_groq_api_key()
         self.groq_model = get_groq_model()
 
         self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.dialogue_extractor = DialogueExtractor()
+        self.management_case_extractor = ManagementCaseExtractor()
 
-    def get_document_transcript(self, filepath: str) -> dict[int, str]:
+    def _get_document_transcript(
+        self, filepath: str, link: str
+    ) -> dict[int, str]:
         """Extracts text of a pdf document.
+
+        Takes in a filepath (locally stored document) or link (online doc) to extract document
+        transcript.
 
         Args:
             filepath: Path to the pdf file whose text needs to be extracted.
+            link: Link to concall pdf.
 
         Returns:
             transcript: Dictionary of page number, page text pair.
-        """
-        transcript = {}
-        try:
-            with pdfplumber.open(filepath) as pdf:
-                logger.debug("Loaded document")
-                page_number = 1
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        transcript[page_number] = text
-                        page_number += 1
-            return transcript
-        except Exception:
-            logger.exception("Could not load file %s", filepath)
 
-    def extract_management_team(self, transcript: dict[int, str]) -> dict:
+        Raises:
+            Exception in case neither of filepath or link are provided.
+        """
+        if not (filepath or link):
+            raise Exception(
+                "Concall source cannot be empty. Provide filepath or link to concall."
+            )
+
+        if link:
+            self.transcript = get_transcript_from_link(link=link)
+        else:
+            self.transcript = get_document_transcript(filepath=filepath)
+        return self.transcript
+
+    def extract_management_team(self) -> dict:
         """Extracts the management team from the text."""
         extracted_text = ""
-        for page_number, text in transcript.items():
+        for page_number, text in self.transcript.items():
             if page_number <= 2:
                 extracted_text += text
             else:
@@ -53,29 +67,33 @@ class ConcallParser:
             groq_model=self.groq_model,
         )
 
-    def extract_commentary(self, transcript: dict[int, str]) -> list:
+    def extract_commentary(self) -> list:
         """Extracts commentary from the input."""
         response = (
             self.dialogue_extractor.extract_commentary_and_future_outlook(
-                transcript=transcript,
+                transcript=self.transcript,
                 groq_model=self.groq_model,
             )
         )
         return response
 
-    def extract_analyst_discussion(self, transcript: dict[int, str]) -> dict:
+    def handle_only_management_case(self) -> dict[str, list[str]]:
+        """Extracts dialogue where moderator is not present."""
+        return self.management_case_extractor.extract(self.transcript)
+
+    def extract_analyst_discussion(self) -> dict:
         """Extracts analyst discussion from the input."""
         dialogues = self.dialogue_extractor.extract_dialogues(
-            transcript_dict=transcript,
+            transcript_dict=self.transcript,
             groq_model=self.groq_model,
         )
         return dialogues["analyst_discussion"]
 
-    def extract_all(self, transcript: dict[int, str]) -> dict:
+    def extract_all(self) -> dict:
         """Extracts all information from the input."""
-        management = self.extract_management_team(transcript=transcript)
-        commentary = self.extract_commentary(transcript=transcript)
-        analyst = self.extract_analyst_discussion(transcript=transcript)
+        management = self.extract_management_team()
+        commentary = self.extract_commentary()
+        analyst = self.extract_analyst_discussion()
         return {
             "management": management,
             "commentary": commentary,

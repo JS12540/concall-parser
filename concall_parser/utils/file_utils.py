@@ -96,7 +96,11 @@ def get_transcript_from_link(link:str) -> dict[int, str]:
     """
     try:
         logger.debug("Request to get transcript from link.")
-        response = requests.get(url=link, timeout=30, stream=True)
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"# noqa: E501
+        }
+        response = requests.get(url=link, headers=headers, timeout=30, stream=True)
         response.raise_for_status()
 
         temp_doc_path = "temp_document.pdf"
