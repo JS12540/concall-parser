@@ -7,8 +7,8 @@ def process_single_file(path: str):
     logger.debug("Starting testing for %s", path)
     parser = ConcallParser(link=path)
 
-    extracted = parser.extract_all()
-    print(f"Extracted all: {extracted}")
+    extracted = parser.extract_commentary()
+    print(f"Extracted: {extracted}")
 
 
 if __name__ == "__main__":

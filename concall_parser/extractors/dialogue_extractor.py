@@ -47,10 +47,11 @@ class DialogueExtractor:
             "end": [],
         }
         intent = None
-        for _, text in transcript.items():
+        for page_number, text in transcript.items():
+            print(f"Processing page {page_number}")
             if self.last_speaker:
                 if self.last_speaker == "Moderator":
-                    logger.debug(
+                    logger.info(
                         "Skipping moderator statement as it is not needed anymore."
                     )
             else:
@@ -58,7 +59,7 @@ class DialogueExtractor:
                 if first_speaker_match:
                     leftover_text = text[: first_speaker_match.start()].strip()
                     if leftover_text:
-                        logger.debug(
+                        logger.info(
                             f"Appending leftover text to {self.last_speaker}"
                         )
                         if self.current_analyst:
@@ -71,10 +72,11 @@ class DialogueExtractor:
                             ] += " " + leftover_text
 
             matches = self.speaker_pattern.finditer(text)
+
             for match in matches:
                 speaker = match.group("speaker").strip()
-                dialogue = match.group("dialogue")
-                logger.debug(f"Speaker found: {speaker}")
+                dialogue = match.group("dialogue").strip()
+                logger.info(f"Speaker found: {speaker}")
                 self.last_speaker = speaker
 
                 if speaker == "Moderator":
@@ -99,7 +101,7 @@ class DialogueExtractor:
                     continue
 
                 if intent is None:
-                    break
+                    continue
 
                 if intent == "opening":
                     dialogues["commentary_and_future_outlook"].append(
