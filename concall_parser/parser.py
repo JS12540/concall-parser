@@ -13,17 +13,21 @@ from concall_parser.utils.file_utils import (
 class ConcallParser:
     """Parses the conference call transcript."""
 
-    def __init__(self):
+    def __init__(self, path: str = None, link: str = None):
         # Ensure Groq API key is set and get model
+        self.transcript = self._get_document_transcript(
+            filepath=path, link=link
+        )
         self.groq_api_key = get_groq_api_key()
         self.groq_model = get_groq_model()
-        self.transcript = dict()
 
         self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.dialogue_extractor = DialogueExtractor()
         self.management_case_extractor = ManagementCaseExtractor()
 
-    def _get_document_transcript(self, filepath: str, link: str) -> dict[int, str]:
+    def _get_document_transcript(
+        self, filepath: str, link: str
+    ) -> dict[int, str]:
         """Extracts text of a pdf document.
 
         Takes in a filepath (locally stored document) or link (online doc) to extract document
@@ -40,7 +44,9 @@ class ConcallParser:
             Exception in case neither of filepath or link are provided.
         """
         if not (filepath or link):
-            raise Exception("Document source cannot be empty.")
+            raise Exception(
+                "Concall source cannot be empty. Provide filepath or link to concall."
+            )
 
         if link:
             self.transcript = get_transcript_from_link(link=link)
@@ -63,9 +69,11 @@ class ConcallParser:
 
     def extract_commentary(self) -> list:
         """Extracts commentary from the input."""
-        response = self.dialogue_extractor.extract_commentary_and_future_outlook(
-            transcript=self.transcript,
-            groq_model=self.groq_model,
+        response = (
+            self.dialogue_extractor.extract_commentary_and_future_outlook(
+                transcript=self.transcript,
+                groq_model=self.groq_model,
+            )
         )
         return response
 
@@ -83,9 +91,9 @@ class ConcallParser:
 
     def extract_all(self) -> dict:
         """Extracts all information from the input."""
-        management = self.extract_management_team(transcript=self.transcript)
-        commentary = self.extract_commentary(transcript=self.transcript)
-        analyst = self.extract_analyst_discussion(transcript=self.transcript)
+        management = self.extract_management_team()
+        commentary = self.extract_commentary()
+        analyst = self.extract_analyst_discussion()
         return {
             "management": management,
             "commentary": commentary,
