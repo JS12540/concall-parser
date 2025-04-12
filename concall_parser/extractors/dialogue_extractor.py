@@ -14,26 +14,25 @@ class DialogueExtractor:
             r"(?P<speaker>[A-Za-z\s]+):\s*(?P<dialogue>(?:.*(?:\n(?![A-Za-z\s]+:).*)*)*)",
             re.MULTILINE,
         )
-        self.current_analyst = None
-        self.last_speaker = None
 
     def extract_commentary_and_future_outlook(
         self, transcript: dict[int, str], groq_model: str
     ) -> dict:
         """Extracts commentary and future outlook from the input."""
+        last_speaker = None
         dialogues = {
             "commentary_and_future_outlook": [],
             "analyst_discussion": {},
             "end": [],
         }
         intent = None
+        current_analyst = None
+
         for page_number, text in transcript.items():
             print(f"Processing page {page_number}")
-            if self.last_speaker:
-                logger.info(
-                    f"Checking for leftover text for {self.last_speaker}"
-                )
-                if self.last_speaker == "Moderator":
+            if last_speaker:
+                logger.info(f"Checking for leftover text for {last_speaker}")
+                if last_speaker == "Moderator":
                     logger.info(
                         "Skipping moderator statement as it is not needed anymore."
                     )
@@ -43,13 +42,13 @@ class DialogueExtractor:
                         leftover_text = text[
                             : first_speaker_match.start()
                         ].strip()
-                        if leftover_text and self.last_speaker is not None:
+                        if leftover_text and last_speaker is not None:
                             logger.info(
-                                f"Appending leftover text to {self.last_speaker}"
+                                f"Appending leftover text to {last_speaker}"
                             )
-                            if self.current_analyst:
+                            if current_analyst:
                                 dialogues["analyst_discussion"][
-                                    self.current_analyst
+                                    current_analyst
                                 ]["dialogue"][-1]["dialogue"] += (
                                     " " + leftover_text
                                 )
@@ -67,12 +66,12 @@ class DialogueExtractor:
                                     ]["dialogue"] += " " + leftover_text
                     else:
                         logger.info(
-                            "No matches found, appending leftover text to last speaker"
+                            f"No matches found, appending leftover text to {last_speaker}"
                         )
-                        if self.current_analyst:
-                            dialogues["analyst_discussion"][
-                                self.current_analyst
-                            ]["dialogue"][-1]["dialogue"] += " " + leftover_text
+                        if current_analyst:
+                            dialogues["analyst_discussion"][current_analyst][
+                                "dialogue"
+                            ][-1]["dialogue"] += " " + leftover_text
                         else:
                             if (
                                 len(dialogues["commentary_and_future_outlook"])
@@ -88,7 +87,7 @@ class DialogueExtractor:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue").strip()
                 logger.info(f"Speaker found: {speaker}")
-                self.last_speaker = speaker
+                last_speaker = speaker
 
                 if speaker == "Moderator":
                     logger.info(
@@ -134,33 +133,32 @@ class DialogueExtractor:
             "end": [],
         }
         intent = None
+        last_speaker = None
+        current_analyst = None
 
         for page_number, text in transcript_dict.items():
             # Add leftover text before speaker pattern to last speaker
             # If not first page of concall
-            if self.last_speaker:
-                logger.info(
-                    f"Checking for leftover text for {self.last_speaker}"
-                )
-                if self.last_speaker == "Moderator":
+            if last_speaker:
+                logger.info(f"Checking for leftover text for {last_speaker}")
+                if last_speaker == "Moderator":
                     logger.debug(
                         "Skipping moderator statement as it is not needed anymore."
                     )
                 else:
                     first_speaker_match = self.speaker_pattern.search(text)
-                    print(f"first_speaker_match: {first_speaker_match}")
                     if first_speaker_match:
                         leftover_text = text[
                             : first_speaker_match.start()
                         ].strip()
                         if leftover_text:
                             logger.info(
-                                f"Appending leftover text to {self.last_speaker}"
+                                f"Appending leftover text to {last_speaker}"
                             )
                             # TODO: refer to actual data to create model, example
-                            if self.current_analyst:
+                            if current_analyst:
                                 dialogues["analyst_discussion"][
-                                    self.current_analyst
+                                    current_analyst
                                 ]["dialogue"][-1]["dialogue"] += (
                                     " " + leftover_text
                                 )
@@ -175,15 +173,17 @@ class DialogueExtractor:
                                 ):
                                     dialogues["commentary_and_future_outlook"][
                                         -1
-                                    ]["dialogue"] += " " + leftover_text
+                                    ]["dialogue"] += " " + clean_text(
+                                        leftover_text
+                                    )
                     else:
                         logger.info(
                             "No matches found, appending leftover text to last speaker"
                         )
-                        if self.current_analyst:
-                            dialogues["analyst_discussion"][
-                                self.current_analyst
-                            ]["dialogue"][-1]["dialogue"] += " " + leftover_text
+                        if current_analyst:
+                            dialogues["analyst_discussion"][current_analyst][
+                                "dialogue"
+                            ][-1]["dialogue"] += " " + clean_text(leftover_text)
                         else:
                             if (
                                 len(dialogues["commentary_and_future_outlook"])
@@ -191,28 +191,28 @@ class DialogueExtractor:
                             ):
                                 dialogues["commentary_and_future_outlook"][-1][
                                     "dialogue"
-                                ] += " " + leftover_text
+                                ] += " " + clean_text(leftover_text)
 
             matches = self.speaker_pattern.finditer(text)
 
             if not any(self.speaker_pattern.finditer(text)) and text.strip():
                 logger.debug(
-                    f"No speaker pattern found, appending text to {self.last_speaker}"
+                    f"No speaker pattern found, appending text to {last_speaker}"
                 )
-                if self.current_analyst:
-                    dialogues["analyst_discussion"][self.current_analyst][
+                if current_analyst:
+                    dialogues["analyst_discussion"][current_analyst][
                         "dialogue"
-                    ][-1]["dialogue"] += " " + self.clean_text(text)
+                    ][-1]["dialogue"] += " " + clean_text(text)
                 else:
                     dialogues["commentary_and_future_outlook"][-1][
                         "dialogue"
-                    ] += " " + self.clean_text(text)
+                    ] += " " + clean_text(text)
 
             for match in matches:
                 speaker = match.group("speaker").strip()
                 dialogue = match.group("dialogue")
                 logger.debug(f"Speaker found: {speaker}")
-                self.last_speaker = speaker
+                last_speaker = speaker
 
                 if speaker == "Moderator":
                     logger.debug(
@@ -230,13 +230,11 @@ class DialogueExtractor:
                     if intent == "new_analyst_start":
                         analyst_name = response["analyst_name"]
                         analyst_company = response["analyst_company"]
-                        self.current_analyst = analyst_name
+                        current_analyst = analyst_name
                         logger.debug(
-                            f"Current analyst set to: {self.current_analyst}"
+                            f"Current analyst set to: {current_analyst}"
                         )
-                        dialogues["analyst_discussion"][
-                            self.current_analyst
-                        ] = {
+                        dialogues["analyst_discussion"][current_analyst] = {
                             "analyst_company": analyst_company,
                             "dialogue": [],
                         }
@@ -256,8 +254,8 @@ class DialogueExtractor:
                         }
                     )
                 elif intent == "new_analyst_start":
-                    logger.debug(f"Analyst name: {self.current_analyst}")
-                    dialogues["analyst_discussion"][self.current_analyst][
+                    logger.debug(f"Analyst name: {current_analyst}")
+                    dialogues["analyst_discussion"][current_analyst][
                         "dialogue"
                     ].append(
                         {

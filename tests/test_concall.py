@@ -7,9 +7,9 @@ def process_single_file(path: str):
     logger.debug("Starting testing for %s", path)
     parser = ConcallParser(path=path)
 
-    extracted = parser.extract_commentary()
+    extracted = parser.extract_all()
     print(f"Extracted: {extracted}")
 
 
 if __name__ == "__main__":
-    process_single_file(r"test_documents\ambuja_cement.pdf")
+    process_single_file(r"test_documents\irctc.pdf")
