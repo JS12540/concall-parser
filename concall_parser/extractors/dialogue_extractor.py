@@ -65,6 +65,22 @@ class DialogueExtractor:
                                     dialogues["commentary_and_future_outlook"][
                                         -1
                                     ]["dialogue"] += " " + leftover_text
+                    else:
+                        logger.info(
+                            "No matches found, appending leftover text to last speaker"
+                        )
+                        if self.current_analyst:
+                            dialogues["analyst_discussion"][
+                                self.current_analyst
+                            ]["dialogue"][-1]["dialogue"] += " " + leftover_text
+                        else:
+                            if (
+                                len(dialogues["commentary_and_future_outlook"])
+                                > 0
+                            ):
+                                dialogues["commentary_and_future_outlook"][-1][
+                                    "dialogue"
+                                ] += " " + leftover_text
 
             matches = self.speaker_pattern.finditer(text)
 
@@ -160,6 +176,22 @@ class DialogueExtractor:
                                     dialogues["commentary_and_future_outlook"][
                                         -1
                                     ]["dialogue"] += " " + leftover_text
+                    else:
+                        logger.info(
+                            "No matches found, appending leftover text to last speaker"
+                        )
+                        if self.current_analyst:
+                            dialogues["analyst_discussion"][
+                                self.current_analyst
+                            ]["dialogue"][-1]["dialogue"] += " " + leftover_text
+                        else:
+                            if (
+                                len(dialogues["commentary_and_future_outlook"])
+                                > 0
+                            ):
+                                dialogues["commentary_and_future_outlook"][-1][
+                                    "dialogue"
+                                ] += " " + leftover_text
 
             matches = self.speaker_pattern.finditer(text)
 

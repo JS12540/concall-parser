@@ -12,4 +12,4 @@ def process_single_file(path: str):
 
 
 if __name__ == "__main__":
-    process_single_file(r"test_documents\Adani_total_gas.pdf")
+    process_single_file(r"test_documents\ambuja_cement.pdf")
