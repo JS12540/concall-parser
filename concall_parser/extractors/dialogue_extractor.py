@@ -29,12 +29,10 @@ class DialogueExtractor:
         current_analyst = None
 
         for page_number, text in transcript.items():
-            logger.info(f"Processing page {page_number}")
-            if self.last_speaker:
-                logger.info(
-                    f"Checking for leftover text for {self.last_speaker}"
-                )
-                if self.last_speaker == "Moderator":
+            print(f"Processing page {page_number}")
+            if last_speaker:
+                logger.info(f"Checking for leftover text for {last_speaker}")
+                if last_speaker == "Moderator":
                     logger.info(
                         "Skipping moderator statement as it is not needed anymore."
                     )
