@@ -27,6 +27,8 @@ def get_document_transcript(filepath: str) -> dict[int, str]:
                     transcript[page_number] = text
                     page_number += 1
         return transcript
+    except FileNotFoundError:
+        raise FileNotFoundError("Please check if file exists.")
     except Exception:
         logger.exception("Could not load file %s", filepath)
 
