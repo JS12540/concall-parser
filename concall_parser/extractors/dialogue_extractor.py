@@ -15,6 +15,12 @@ class DialogueExtractor:
             r"(?P<speaker>[A-Za-z\s]+):\s*(?P<dialogue>(?:.*(?:\n(?![A-Za-z\s]+:).*)*)*)",
             re.MULTILINE,
         )
+        self.dialogues = {
+            "commentary_and_future_outlook": [],
+            "analyst_discussion": {},
+            "end": [],
+        }
+        self.page_number = 0
 
     def _get_verified_speakers(
         self, transcript: dict[int, str], groq_model: str
@@ -75,244 +81,187 @@ class DialogueExtractor:
         except re.error as e:
             logger.error(f"Failed to compile dynamic regex pattern: {e}")
 
+    def _handle_leftover_text(
+        self, text: str, last_speaker: str, current_analyst: str | None
+    ):
+        first_speaker_match = self.speaker_pattern.search(text)
+        if first_speaker_match:
+            leftover_text = text[: first_speaker_match.start()].strip()
+        else:
+            leftover_text = text.strip()
+
+        if not leftover_text or last_speaker == "Moderator":
+            return
+
+        cleaned = clean_text(leftover_text)
+
+        if current_analyst:
+            self.dialogues["analyst_discussion"][current_analyst]["dialogue"][
+                -1
+            ]["dialogue"] += f" {cleaned}"
+        elif self.dialogues["commentary_and_future_outlook"]:
+            self.dialogues["commentary_and_future_outlook"][-1]["dialogue"] += (
+                f" {cleaned}"
+            )
+
+    def _append_dialogue(
+        self,
+        speaker: str,
+        dialogue: str,
+        intent: str,
+        current_analyst: str | None,
+    ):
+        cleaned = clean_text(dialogue)
+        if intent == "opening":
+            self.dialogues["commentary_and_future_outlook"].append(
+                {
+                    "speaker": speaker,
+                    "dialogue": cleaned,
+                }
+            )
+        elif intent == "new_analyst_start" and current_analyst:
+            self.dialogues["analyst_discussion"][current_analyst][
+                "dialogue"
+            ].append(
+                {
+                    "speaker": speaker,
+                    "dialogue": cleaned,
+                }
+            )
+        elif intent == "end":
+            self.dialogues["end"].append(
+                {
+                    "speaker": speaker,
+                    "dialogue": cleaned,
+                }
+            )
+
+    def _process_match(
+        self, match, groq_model: str, current_analyst: str | None
+    ):
+        speaker = match.group("speaker").strip()
+        dialogue = match.group("dialogue")
+        intent = None
+
+        if speaker == "Moderator":
+            response = json.loads(
+                ClassifyModeratorIntent.process(
+                    dialogue=dialogue, groq_model=groq_model
+                )
+            )
+            intent = response["intent"]
+            if intent == "new_analyst_start":
+                current_analyst = response["analyst_name"]
+                self.dialogues["analyst_discussion"][current_analyst] = {
+                    "analyst_company": response["analyst_company"],
+                    "dialogue": [],
+                }
+            return intent, current_analyst, None  # Moderator handled
+
+        return intent, current_analyst, (speaker, dialogue)
+
     def extract_commentary_and_future_outlook(
         self, transcript: dict[int, str], groq_model: str
     ) -> dict:
-        """Extracts commentary and future outlook from the input."""
+        """Extracts commentary and future outlook from the transcript.
+
+        Args:
+            transcript (dict[int, str]): The transcript to extract from.
+            groq_model (str): The model to use for groq.
+
+        Returns:
+            dict: The extracted commentary and future outlook.
+        """
+        logger.info("Extracting commentary...")
         last_speaker = None
-        dialogues = {
-            "commentary_and_future_outlook": [],
-            "analyst_discussion": {},
-            "end": [],
-        }
         intent = None
         current_analyst = None
-        leftover_text = ""
 
         for page_number, text in transcript.items():
-            print(f"Processing page {page_number}")
+            self.page_number = page_number
+
             if last_speaker:
-                logger.info(f"Checking for leftover text for {last_speaker}")
-                if last_speaker == "Moderator":
-                    logger.info(
-                        "Skipping moderator statement as it is not needed anymore."
-                    )
-                else:
-                    first_speaker_match = self.speaker_pattern.search(text)
-                    if first_speaker_match:
-                        leftover_text = text[
-                            : first_speaker_match.start()
-                        ].strip()
-                        if leftover_text and last_speaker is not None:
-                            if current_analyst:
-                                dialogues["analyst_discussion"][
-                                    current_analyst
-                                ]["dialogue"][-1]["dialogue"] += (
-                                    " " + leftover_text
-                                )
-                            else:
-                                if (
-                                    len(
-                                        dialogues[
-                                            "commentary_and_future_outlook"
-                                        ]
-                                    )
-                                    > 0
-                                ):
-                                    dialogues["commentary_and_future_outlook"][
-                                        -1
-                                    ]["dialogue"] += " " + leftover_text
-                    else:
-                        logger.info(
-                            f"No matches found, appending leftover text to {last_speaker}"
-                        )
-                        if current_analyst:
-                            dialogues["analyst_discussion"][current_analyst][
-                                "dialogue"
-                            ][-1]["dialogue"] += " " + text
-                        else:
-                            if (
-                                len(dialogues["commentary_and_future_outlook"])
-                                > 0
-                            ):
-                                dialogues["commentary_and_future_outlook"][-1][
-                                    "dialogue"
-                                ] += " " + text
-                        continue
+                self._handle_leftover_text(text, last_speaker, current_analyst)
 
-            matches = self.speaker_pattern.finditer(text)
-
-            for match in matches:
+            for match in self.speaker_pattern.finditer(text):
                 speaker = match.group("speaker").strip()
-                dialogue = match.group("dialogue").strip()
-                logger.info(f"Speaker found: {speaker}")
                 last_speaker = speaker
 
                 if speaker == "Moderator":
-                    logger.info(
-                        "Moderator statement found, giving it for classification"
-                    )
-                    response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue,
-                        groq_model=groq_model,
-                    )
-                    response = json.loads(response)
-                    logger.info(
-                        f"Response from Moderator classifier: {response}"
+                    response = json.loads(
+                        ClassifyModeratorIntent.process(
+                            dialogue=match.group("dialogue"),
+                            groq_model=groq_model,
+                        )
                     )
                     intent = response["intent"]
                     if intent == "new_analyst_start":
-                        return dialogues["commentary_and_future_outlook"]
-
-                    logger.debug(
-                        "Skipping moderator statement as it is not needed anymore."
-                    )
-                    continue
-
-                if intent is None:
+                        return self.dialogues["commentary_and_future_outlook"]
                     continue
 
                 if intent == "opening":
-                    dialogues["commentary_and_future_outlook"].append(
-                        {
-                            "speaker": speaker,
-                            "dialogue": clean_text(dialogue),
-                        }
+                    self._append_dialogue(
+                        speaker,
+                        match.group("dialogue"),
+                        intent,
+                        current_analyst,
                     )
                 else:
-                    return dialogues["commentary_and_future_outlook"]
+                    return self.dialogues["commentary_and_future_outlook"]
+
+        return self.dialogues["commentary_and_future_outlook"]
 
     def extract_dialogues(
         self, transcript_dict: dict[int, str], groq_model: str
     ) -> dict:
-        """Extract dialogues and classify stages."""
+        """Extracts dialogues from the transcript.
+
+        Args:
+            transcript_dict (dict[int, str]): The transcript to extract from.
+            groq_model (str): The model to use for groq.
+
+        Returns:
+            dict: The extracted dialogues.
+        """
         logger.info("Extracting dialogues...")
-        dialogues = {
-            "commentary_and_future_outlook": [],
-            "analyst_discussion": {},
-            "end": [],
-        }
         intent = None
         last_speaker = None
         current_analyst = None
-        leftover_text = ""
 
         for page_number, text in transcript_dict.items():
-            # Add leftover text before speaker pattern to last speaker
-            # If not first page of concall
+            if page_number < self.page_number - 1:
+                continue
+
             if last_speaker:
-                logger.info(f"Checking for leftover text for {last_speaker}")
-                if last_speaker == "Moderator":
-                    logger.debug(
-                        "Skipping moderator statement as it is not needed anymore."
-                    )
-                else:
-                    first_speaker_match = self.speaker_pattern.search(text)
-                    if first_speaker_match:
-                        leftover_text = text[
-                            : first_speaker_match.start()
-                        ].strip()
-                        if leftover_text:
-                            logger.info(
-                                f"Appending leftover text to {last_speaker}"
-                            )
-                            if current_analyst:
-                                dialogues["analyst_discussion"][
-                                    current_analyst
-                                ]["dialogue"][-1]["dialogue"] += (
-                                    " " + leftover_text
-                                )
-                            else:
-                                if (
-                                    len(
-                                        dialogues[
-                                            "commentary_and_future_outlook"
-                                        ]
-                                    )
-                                    > 0
-                                ):
-                                    dialogues["commentary_and_future_outlook"][
-                                        -1
-                                    ]["dialogue"] += " " + clean_text(
-                                        leftover_text
-                                    )
-                    else:
-                        logger.info(
-                            "No matches found, appending leftover text to last speaker"
-                        )
-                        if current_analyst:
-                            dialogues["analyst_discussion"][current_analyst][
-                                "dialogue"
-                            ][-1]["dialogue"] += " " + clean_text(leftover_text)
-                        else:
-                            if dialogues["commentary_and_future_outlook"] != []:
-                                dialogues["commentary_and_future_outlook"][-1][
-                                    "dialogue"
-                                ] += " " + clean_text(leftover_text)
+                self._handle_leftover_text(text, last_speaker, current_analyst)
 
-            matches = self.speaker_pattern.finditer(text)
-
-            for match in matches:
+            for match in self.speaker_pattern.finditer(text):
                 speaker = match.group("speaker").strip()
-                dialogue = match.group("dialogue")
-                logger.debug(f"Speaker found: {speaker}")
                 last_speaker = speaker
 
                 if speaker == "Moderator":
-                    logger.debug(
-                        "Moderator statement found, giving it for classification"
-                    )
-                    response = ClassifyModeratorIntent.process(
-                        dialogue=dialogue,
-                        groq_model=groq_model,
-                    )
-                    response = json.loads(response)
-                    logger.info(
-                        f"Response from Moderator classifier: {response}"
+                    response = json.loads(
+                        ClassifyModeratorIntent.process(
+                            dialogue=match.group("dialogue"),
+                            groq_model=groq_model,
+                        )
                     )
                     intent = response["intent"]
                     if intent == "new_analyst_start":
-                        analyst_name = response["analyst_name"]
-                        analyst_company = response["analyst_company"]
-                        current_analyst = analyst_name
-                        logger.debug(
-                            f"Current analyst set to: {current_analyst}"
-                        )
-                        dialogues["analyst_discussion"][current_analyst] = {
-                            "analyst_company": analyst_company,
+                        current_analyst = response["analyst_name"]
+                        self.dialogues["analyst_discussion"][
+                            current_analyst
+                        ] = {
+                            "analyst_company": response["analyst_company"],
                             "dialogue": [],
                         }
-                    logger.debug(
-                        "Skipping moderator statement as it is not needed anymore."
-                    )
                     continue
 
                 if intent is None:
                     break
 
-                if intent == "opening":
-                    dialogues["commentary_and_future_outlook"].append(
-                        {
-                            "speaker": speaker,
-                            "dialogue": clean_text(dialogue),
-                        }
-                    )
-                elif intent == "new_analyst_start":
-                    logger.debug(f"Analyst name: {current_analyst}")
-                    dialogues["analyst_discussion"][current_analyst][
-                        "dialogue"
-                    ].append(
-                        {
-                            "speaker": speaker,
-                            "dialogue": clean_text(dialogue),
-                        }
-                    )
-                elif intent == "end":
-                    dialogues["end"].append(
-                        {
-                            "speaker": speaker,
-                            "dialogue": clean_text(dialogue),
-                        }
-                    )
+                self._append_dialogue(
+                    speaker, match.group("dialogue"), intent, current_analyst
+                )
 
-        return dialogues
+        return self.dialogues

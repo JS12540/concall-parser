@@ -14,7 +14,6 @@ class ConcallParser:
     """Parses the conference call transcript."""
 
     def __init__(self, path: str = None, link: str = None):
-        # Ensure Groq API key is set and get model
         self.transcript = self._get_document_transcript(
             filepath=path, link=link
         )

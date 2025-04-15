@@ -104,10 +104,16 @@ parser.extract_all()
 }
 ```
 
+## Concalls not supported yet
+
+Concalls which do not contain analyst dicusssion and are more of press release like Reliance are not supported yet.
 
 ## 🤝 Contributing
 
 We welcome contributions! If you'd like to improve this library or report issues, please feel free to submit a pull request or open an issue.
+
+You can find detailed contributing guidelines here: [CONTRIBUTING.md](https://github.com/JS12540/concall-parser/blob/main/CONTRIBUTING.md)
+
 
 ## 📝 License
 
