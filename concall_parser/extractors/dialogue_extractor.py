@@ -2,6 +2,7 @@ import json
 import re
 
 from concall_parser.agents.classify import ClassifyModeratorIntent
+from concall_parser.agents.verify_speakers import VerifySpeakerNames
 from concall_parser.log_config import logger
 from concall_parser.utils.cleaner import clean_text
 
@@ -14,6 +15,65 @@ class DialogueExtractor:
             r"(?P<speaker>[A-Za-z\s]+):\s*(?P<dialogue>(?:.*(?:\n(?![A-Za-z\s]+:).*)*)*)",
             re.MULTILINE,
         )
+
+    def _get_verified_speakers(
+        self, transcript: dict[int, str], groq_model: str
+    ):
+        """Extracts candidate speakers and verifies them using an LLM."""
+        logger.info("Extracting potential speaker candidates...")
+        candidates = set()
+        try:
+            for _, text in transcript.items():
+                candidates_page = set(
+                    match.group(1).strip()
+                    for match in self.speaker_pattern.finditer(text)
+                )
+                candidates.update(candidates_page)
+
+            if not candidates:
+                logger.warning("No potential speaker candidates found.")
+                return set(["Moderator"])
+
+            logger.info(
+                f"Found {len(candidates)} unique candidates. Verifying names."
+            )
+            candidates_list = "Candidate:" + json.dumps(list(candidates))
+            names = VerifySpeakerNames.process(
+                speakers=candidates_list, groq_model=groq_model
+            )
+            verified_speakers = json.loads(names)["output"]
+
+            if not isinstance(verified_speakers, list):
+                raise ValueError("LLM response is not a JSON list.")
+            return set(verified_speakers)
+        except json.JSONDecodeError as e:
+            logger.error(
+                f"Failed to decode JSON from LLM response: {e}. Response: {names}"
+            )
+            raise e
+        except Exception as e:
+            logger.error(f"Error during LLM speaker verification: {e}")
+            raise e
+
+    def _build_dynamic_speaker_pattern(self, verified_speakers: set[str]):
+        """Builds the regex pattern from a set of verified speaker names."""
+        if not verified_speakers:
+            logger.error("Cannot build pattern: No verified speakers provided.")
+            return
+
+        pattern_string = "|".join(
+            re.escape(name) for name in sorted(list(verified_speakers))
+        )
+
+        try:
+            self.speaker_pattern = re.compile(
+                rf"(?P<speaker>{pattern_string}):\s*(?P<dialogue>.(?:\n(?!(?:{pattern_string}):).)*)",
+                re.MULTILINE,
+            )
+            logger.info("Successfully built dynamic speaker pattern.")
+            logger.debug(f"Dynamic Pattern: {self.speaker_pattern.pattern}")
+        except re.error as e:
+            logger.error(f"Failed to compile dynamic regex pattern: {e}")
 
     def extract_commentary_and_future_outlook(
         self, transcript: dict[int, str], groq_model: str
