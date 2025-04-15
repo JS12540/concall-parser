@@ -1,3 +1,4 @@
+import json
 import os
 
 import pytest
@@ -18,6 +19,7 @@ def test_pdf_parser_regression(pdf_file, data_regression):
     parser = ConcallParser(path=pdf_file)
     try:
         result = parser.extract_all()
+        logger.debug(f"extracted data: \n{json.dumps(result, indent=4)}")
         data_regression.check(result)
     except Exception as e:
         logger.error(f"Failed on file: {pdf_file} with error: {str(e)}")
