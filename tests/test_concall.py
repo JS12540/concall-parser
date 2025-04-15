@@ -6,8 +6,7 @@ def process_single_file(path: str):
     """Run a single file and save its output and log."""
     logger.debug("Starting testing for %s", path)
     parser = ConcallParser(link=path)
-
-    extracted = parser.extract_all()
+    extracted = parser.extract_management_team()
     print(f"Extracted all: {extracted}")
 
 
