@@ -44,7 +44,6 @@ export GROQ_MODEL="YOUR GROQ MODEL NAME"
 
 We by default use llama3-70b-8192 if any groq supported models are not provided.
 
-
 ## ✨ Features
 
 Concall parser lets you extract whatever you want from a concall. You can extract the management commentary, analyst discussion, and other details like company name and management names present in the concalls.
@@ -71,6 +70,38 @@ parser.extract_analyst_discussion()
 
 ```python
 parser.extract_all()
+```
+
+## Example Data structure
+
+```json
+{
+    "management": {
+        "company_name": "SKF India Limited", // company name will come as value
+        "Mukund Vasudevan": "Managing Director", // management name will come as key and designation will come as value
+    },
+    "commentary": [
+        {
+            "speaker": "Ashish Pruthi",
+            "dialogue": "thank you. good morning, everyone. thank you for joining us today. today with us, we have skf india's managing director, mr. mukund vasudevan and our cfo, mr. ashish saraf. before i turn the call over to the management, i would like to remind you that in this call, some of the remarks contain forward-looking statements, which are subject to risks and uncertainties and actual results may differ materially we can now open the call for q&a."
+        }
+    ],
+    "analyst_dicussion" : {
+        "Mukesh Saraf" : {
+            "analyst_company" : "Avendus Spark",
+            "dialogue" : [
+                {
+                    "speaker": "Mukesh Saraf",
+                    "dialogue": "my first question is on the revenue mix. so could you kind of give us some details on the different segments like the auto, industrial, exports and probably within that, some of the subsegments as well."
+                },
+                {
+                    "speaker": "Mukund Vasudevan",
+                    "dialogue": "all right. i'll let ashish saraf, my cfo, answer that in terms of so that he can share precise numbers."
+                },
+            ]
+        }
+    }
+}
 ```
 
 
