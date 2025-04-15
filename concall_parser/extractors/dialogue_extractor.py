@@ -213,7 +213,6 @@ class DialogueExtractor:
                             logger.info(
                                 f"Appending leftover text to {last_speaker}"
                             )
-                            # TODO: refer to actual data to create model, example
                             if current_analyst:
                                 dialogues["analyst_discussion"][
                                     current_analyst
