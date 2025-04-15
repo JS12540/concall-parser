@@ -101,7 +101,7 @@ class ConcallParser:
         commentary = self.extract_commentary()
         analyst = self.extract_analyst_discussion()
         return {
-            "concall_details": management,
+            "concall_info": management,
             "commentary": commentary,
             "analyst": analyst,
         }
