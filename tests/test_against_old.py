@@ -13,6 +13,7 @@ PDF_DIR = "tests/test_documents"
 ])
 def test_pdf_parser_regression(pdf_file, data_regression):
     """Test against saved working version of output."""
+    data_regression.maxDiff = None
     logger.info(f"Testing for file {pdf_file}")
     parser = ConcallParser(path=pdf_file)
     try:
