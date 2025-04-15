@@ -1,2 +1,4 @@
 pre-commit==3.7.0
 ruff==0.4.1
+pytest
+pytest-regressions
