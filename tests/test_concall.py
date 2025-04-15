@@ -14,7 +14,6 @@ def test_single_file(path: str):
     """Run a single file and save its output and log."""
     logger.debug("Starting testing for %s", path)
     parser = ConcallParser(path=path)
-
     extracted = parser.extract_all()
     logger.info(f"Extracted info: {json.dumps(extracted, indent=4)}")
 
