@@ -112,3 +112,18 @@ We welcome contributions! If you'd like to improve this library or report issues
 ## 📝 License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+
+## 🎯 Downstream Tasks
+
+Here are some potential downstream tasks where `concall-parser` can be highly valuable:
+
+| Task | Description |
+|------|-------------|
+| **Sentiment Analysis** | Analyze the tone (positive/negative/neutral) of management commentary to assess confidence or caution. |
+| **Named Entity Recognition (NER)** | Extract structured entities such as company names, executive names, analyst firms, and competitors. |
+| **Competitor Benchmarking** | Compare commentary and strategy across companies in the same sector for peer analysis. |
+| **Intent Classification** | Categorize analyst questions by topic (financials, operations, market outlook, etc.). |
+| **Knowledge Base Generation** | Populate internal tools or dashboards with structured Q&A and insights from concalls. |
+| **QoQ Change Tracking** | Monitor changes in management messaging and strategy across earnings calls. |
+| **Earnings Call Summarization** | Automatically generate concise summaries for quick understanding of the concall. |
