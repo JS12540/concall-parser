@@ -14,7 +14,6 @@ class ConcallParser:
     """Parses the conference call transcript."""
 
     def __init__(self, path: str = None, link: str = None):
-        # Ensure Groq API key is set and get model
         self.transcript = self._get_document_transcript(
             filepath=path, link=link
         )
@@ -54,8 +53,15 @@ class ConcallParser:
             self.transcript = get_document_transcript(filepath=filepath)
         return self.transcript
 
-    def extract_management_team(self) -> dict:
-        """Extracts the management team from the text."""
+    def extract_concall_info(self) -> dict:
+        """Extracts company name and management team from the transcript.
+
+        Args:
+            None
+
+        Returns:
+            dict: Company name and management team as a dictionary.
+        """
         extracted_text = ""
         for page_number, text in self.transcript.items():
             if page_number <= 2:
@@ -91,11 +97,11 @@ class ConcallParser:
 
     def extract_all(self) -> dict:
         """Extracts all information from the input."""
-        management = self.extract_management_team()
+        management = self.extract_concall_info()
         commentary = self.extract_commentary()
         analyst = self.extract_analyst_discussion()
         return {
-            "management": management,
+            "concall_info": management,
             "commentary": commentary,
             "analyst": analyst,
         }

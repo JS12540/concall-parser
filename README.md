@@ -48,10 +48,10 @@ We by default use llama3-70b-8192 if any groq supported models are not provided.
 
 Concall parser lets you extract whatever you want from a concall. You can extract the management commentary, analyst discussion, and other details like company name and management names present in the concalls.
 
-### Extract Management Team
+### Extract Concall Info like Management and Company Name
 
 ```python
-parser.extract_management_team()
+parser.extract_concall_info()
 ```
 
 ### Extract Management Commentary
@@ -104,10 +104,16 @@ parser.extract_all()
 }
 ```
 
+## Concalls not supported yet
+
+Concalls which do not contain analyst dicusssion and are more of press release like Reliance are not supported yet.
 
 ## 🤝 Contributing
 
 We welcome contributions! If you'd like to improve this library or report issues, please feel free to submit a pull request or open an issue.
+
+You can find detailed contributing guidelines here: [CONTRIBUTING.md](https://github.com/JS12540/concall-parser/blob/main/CONTRIBUTING.md)
+
 
 ## 📝 License
 
