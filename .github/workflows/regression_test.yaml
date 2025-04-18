@@ -23,5 +23,7 @@ jobs:
         pip install -r dev-requirements.txt
 
     - name: Run regression test
+      env:
+        PYTHONPATH: ${{ github.workspace }} 
       run: |
         pytest tests/test_against_old.py
