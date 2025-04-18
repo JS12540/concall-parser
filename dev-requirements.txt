@@ -3,3 +3,4 @@ pytest==8.3.5
 pytest-regressions==2.7.0
 ruff==0.4.1
 python-dotenv==1.1.0
+groq==0.22.0
