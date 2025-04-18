@@ -1,6 +1,8 @@
 # Concall Parser
 
-**Concall Parser** is an open-source Python library designed to efficiently extract insights from earnings call (concall) transcripts. It enables seamless extraction of management commentary, analyst discussions, company information, and more.
+**Concall Parser** is an open-source Python library designed to efficiently extract insights from earnings call (concall) transcripts. It enables seamless extraction of management commentary, analyst discussions, company information, perfect for building financial research tools, summarizers, or investor dashboards..
+
+Check out the repo at [Github](https://github.com/JS12540/concall-parser/).
 
 ---
 
