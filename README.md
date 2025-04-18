@@ -42,11 +42,11 @@ export GROQ_API_KEY="YOUR GROQ API KEY"
 export GROQ_MODEL="YOUR GROQ MODEL NAME"
 ```
 
-We by default use llama3-70b-8192 if any groq supported models are not provided.
+We use llama3-70b-8192 as the default model if any groq supported models are not provided as env.
 
 ## ✨ Features
 
-Concall parser lets you extract whatever you want from a concall. You can extract the management commentary, analyst discussion, and other details like company name and management names present in the concalls.
+Concall Parser enables structured extraction of key insights from earnings call transcripts. You can extract management commentary, analyst discussions, company name, management details, and more—streamlined for downstream analysis or integration.
 
 ### Extract Concall Info like Management and Company Name
 
@@ -86,7 +86,7 @@ parser.extract_all()
             "dialogue": "thank you. good morning, everyone. thank you for joining us today. today with us, we have skf india's managing director, mr. mukund vasudevan and our cfo, mr. ashish saraf. before i turn the call over to the management, i would like to remind you that in this call, some of the remarks contain forward-looking statements, which are subject to risks and uncertainties and actual results may differ materially we can now open the call for q&a."
         }
     ],
-    "analyst_dicussion" : {
+    "analyst_discussion" : {
         "Mukesh Saraf" : {
             "analyst_company" : "Avendus Spark",
             "dialogue" : [
@@ -106,7 +106,7 @@ parser.extract_all()
 
 ## Concalls not supported yet
 
-Concalls which do not contain analyst dicusssion and are more of press release like Reliance are not supported yet.
+Concalls which do not contain analyst dicusssion and are more of press release like Reliance are not supported yet. If you find any concall that is not being parsed correctly, please open an issue with the label `doc unsupported`.
 
 ## 🤝 Contributing
 

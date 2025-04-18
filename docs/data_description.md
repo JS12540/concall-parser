@@ -1,33 +1,90 @@
 # Data Description
 
-We're dealing with unstructured documents (PDFs) of earnings calls (also referred to as conference calls, concalls) in this repo. These have many variations and quirks, which are described below, to enable better understanding during development and debugging.
-
-## Generic format
-
-The most generic (and most common) format is seen in the case of Adani Total Gas Ltd., which is described below. Other documents have slight variations over this format, which need to be taken care of, but we want a generic pipeline to automate things as much as possible.
-
-The start of a document has a page for a letter intimidating the concall, this is not relevant to our use case.
-
-The next page contains the name of the company and some of the management who will be participating in the call (along with their designations).
-
-### Entities
-Three types of entities in a document:
-1. Moderator: Introduces people as they are about to speak, starts and ends the call. Useful for identifying when context has changed.
-2. Management: The management personnel of the company who are speaking in this call. The speech by these guys is extremely important, as they define the prior performance of the company (previous period, for which the concall is happening) and tell us about the management's view on the future of the company (outlook). They also answer questions put forward by analysts on the company's performance and expected changes.
-3. Analysts: Analysts from other companies (investment firms). They question the management on certain aspects of the company's performance.
+We are working with **unstructured earnings call transcripts (concalls)**, in PDF format. These documents are sourced from publicly listed companies and include both **scripted commentary** and **interactive Q&A sessions**. However, the formatting and content style of these transcripts vary significantly, making it challenging to extract structured data consistently.
 
 
-### Contexts
-Mainly two types of contexts that we are interested in:
-1. Management talks: The part where only the management personnel are speaking (moderator may introduce people as they are about to speak). This part gives us insight about the past and an outlook of the company's future, predicted growth etc. This is divided into two subcategories:
-	1. Management commentary  (details): Gives details of past performance, quarterly or half yearly performance.
-	2. Outlook: Gives an indication of what the management sees the company doing in the future, and their viewpoint on how it will play out.
-2. Analyst question answer: Each analyst asks a question, which leads to a conversation between them and a member of the management. This can be used as FAQs and also help to understand more details about the company. Each analyst QA session is quite short (<1 page of text).
+This document outlines the **generic structure**, **common entities**, **important contexts**, and known **document variations** to aid development and debugging.
 
-# Variations
-Here we discuss the different kinds of variations in the documents encountered so far:
-1. No moderator (): Moderator is not present for the concall, The management people handle the call themselves.
-2. No analyst ():
-3. Moderator name used instead of "moderator" ():
-4. Management names not provided at start of document ():
-5. 
+---
+
+## Generic Format
+
+The most common format follows a structure similar to transcripts from **Adani Total Gas Ltd.**, and is described below. Most other transcripts deviate slightly from this structure, requiring our pipeline to be robust to such inconsistencies.
+
+### Structure:
+
+1. **Introductory Page(s)**  
+   - Contains a formal letter or boilerplate intro with date, subject, disclaimers, or a short agenda.  
+   - *Not relevant* for our extraction use cases.
+
+2. **Management Info Page**  
+   - Contains the **company name** and a list of **management personnel** attending the call, often with their **designations**.
+
+3. **Transcript**  
+   - Main body of the concall, which includes:
+     - **Moderator introductions**
+     - **Management commentary**
+     - **Analyst Q&A session**
+
+---
+
+## Entity Types
+
+We primarily deal with three kinds of speaker entities:
+
+1. **Moderator**  
+   - Opens and closes the call, introduces speakers, and manages transitions.  
+   - Useful for **segmenting** the transcript and detecting **context shifts**.
+
+2. **Management**  
+   - Core speakers from the company (e.g., CEO, CFO, Directors).  
+   - Their speech includes:
+     - **Performance commentary** (historical insights)
+     - **Outlook/future plans**
+     - **Responses to analyst queries**
+
+3. **Analysts**  
+   - Represent investment firms and ask questions during the Q&A session.  
+   - Each analyst's segment usually includes their **name**, **company**, and **questions**.
+
+---
+
+## Context Types
+
+We are interested in three major content segments for downstream analysis:
+
+### 1. Management Commentary
+   - Often includes multiple speakers from the management.
+   - Provides:
+     - **Business performance** summaries
+     - **Operational highlights**
+     - **Macroeconomic commentary**
+     - **Future strategy and projections**
+
+### 2. Analyst Q&A
+   - Typically follows the commentary.
+   - Format:  
+     `Analyst:` *asks question(s)*  
+     `Management:` *responds*  
+   - Useful for:
+     - Discovering recurring concerns
+     - Extracting FAQs
+     - Generating investor-facing summaries
+    
+### 3. Company management 
+   - Names and designations of company management participating in the meeting.
+
+---
+
+## Document Variations
+
+Here are known deviations across documents observed so far. Handling these is key to making the pipeline robust and generalizable:
+
+| Variation | Description | Example/Impact |
+|----------|-------------|----------------|
+| **No Moderator** | Entire call is handled by management; no moderator cues. | Harder to detect context shifts. |
+| **No Analyst Section** | Only management commentary is present. | Must gracefully skip Q&A extraction. |
+| **Moderator Named Differently** | Specific name used instead of “Moderator.” | E.g., “Host,” “Operator,” actual name |
+| **Management List Missing** | No list of names/designations provided at the beginning. | Need to infer roles from the conversation. |
+| **Single Management Speaker** | Only one person speaks on behalf of the company. | Simplifies role mapping but affects Q&A identification. |
+| **Inline Speaker Labels** | Speaker name appears inline, without a newline or indentation. | E.g., “John Doe: Thank you for the question...” |

@@ -1,4 +1,11 @@
-### Installation
+# Contributing to Concall Parser
+
+We welcome and appreciate all kinds of contributions—bug reports, feature suggestions, code enhancements, test improvements, and documentation fixes.
+
+If you're planning a large change, please open an issue first so we can discuss it together.
+
+
+## Getting started
 
 1. **Set up your virtual environment:** Assuming your virtual environment is set up and activated, proceed with the following installations.
 
@@ -53,3 +60,22 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 ### Important Note
 
 All ruff checks and Integration unit tests should pass before merging for your PR.
+
+
+## Running tests
+
+Please run the tests described in the tests directory using pytest before pushing your changes.
+
+```bash
+pytest tests/test_against_old.py
+```
+
+Changes that break parsing logic might result in failed tests, human verification needs to be done (as the output is text).
+
+Currently regression tests are implemented in tests/test_against_old.py, which check for changes in output as compared to older outputs (reference files).
+
+In case outputs need to be changed, use the appropriate pytest flag while running tests to replace the reference files.
+
+```bash
+pytest --force-regen tests/test_against_old.py
+```
