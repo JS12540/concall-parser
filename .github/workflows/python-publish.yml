@@ -4,9 +4,17 @@ permissions:
   contents: write
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: "Version bump type"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   publish:
@@ -29,7 +37,7 @@ jobs:
 
       - name: Bump version using script
         id: bump_version
-        run: python .github/scripts/update_version.py
+        run: python .github/scripts/update_version.py ${{ github.event.inputs.bump_type }}
 
       - name: Commit and push new version
         run: |

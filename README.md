@@ -76,7 +76,7 @@ parser.extract_all()
 
 ```json
 {
-    "management": {
+    "concall_info": {
         "company_name": "SKF India Limited", // company name will come as value
         "Mukund Vasudevan": "Managing Director", // management name will come as key and designation will come as value
     },
