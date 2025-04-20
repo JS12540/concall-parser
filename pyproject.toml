@@ -19,6 +19,7 @@ python = "^3.10"
 groq = "0.22.0"
 pdfplumber = "0.11.5"
 python-dotenv = "1.1.0"
+requests = "2.32.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "0.4.1"
