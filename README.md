@@ -46,6 +46,13 @@ export GROQ_API_KEY="YOUR GROQ API KEY"
 export GROQ_MODEL="YOUR GROQ MODEL NAME"
 ```
 
+Or just pass in the values when creating the parser object.
+
+```python
+parser = ConcallParser(path="path/to/concall.pdf", groq_api_key=your_api_key, groq_model=preferred_groq_model)
+```
+
+
 We use llama3-70b-8192 as the default model if any groq supported models are not provided as env.
 
 ## ✨ Features
