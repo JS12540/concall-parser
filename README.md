@@ -1,10 +1,12 @@
 # Concall Parser
 
-**Concall Parser** is an open-source Python library designed to efficiently extract insights from earnings call (concall) transcripts. It enables seamless extraction of management commentary, analyst discussions, company information, perfect for building financial research tools, summarizers, or investor dashboards..
+**Concall Parser** is an open-source Python library designed to efficiently extract insights from earnings call (concall) transcripts. It enables seamless extraction of management commentary, analyst discussions, company information, perfect for building financial research tools, summarizers, or investor dashboards.
 
 Check out the repo at [Github](https://github.com/JS12540/concall-parser/).
 
 ---
+
+**Note:** We currently support earnings calls of Indian companies (BSE, NSE registered) only.
 
 ## 📦 Installation
 
@@ -43,6 +45,13 @@ The library leverages GROQ for core NLP tasks such as intent classification. To 
 export GROQ_API_KEY="YOUR GROQ API KEY"
 export GROQ_MODEL="YOUR GROQ MODEL NAME"
 ```
+
+Or just pass in the values when creating the parser object.
+
+```python
+parser = ConcallParser(path="path/to/concall.pdf", groq_api_key=your_api_key, groq_model=preferred_groq_model)
+```
+
 
 We use llama3-70b-8192 as the default model if any groq supported models are not provided as env.
 

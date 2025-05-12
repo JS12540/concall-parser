@@ -4,6 +4,7 @@ from concall_parser.extractors.management import CompanyAndManagementExtractor
 from concall_parser.extractors.management_case_extractor import (
     ManagementCaseExtractor,
 )
+from concall_parser.log_config import configure_logger
 from concall_parser.utils.file_utils import (
     get_document_transcript,
     get_transcript_from_link,
@@ -13,20 +14,41 @@ from concall_parser.utils.file_utils import (
 class ConcallParser:
     """Parses the conference call transcript."""
 
-    def __init__(self, path: str = None, link: str = None):
-        self.transcript = self._get_document_transcript(
-            filepath=path, link=link
-        )
-        self.groq_api_key = get_groq_api_key()
-        self.groq_model = get_groq_model()
+    def __init__(
+        self,
+        path: str = None,
+        link: str = None,
+        groq_api_key: str | None = None,
+        groq_model: str = "llama3:70b-8192",
+        save_logs_to_file: bool = False,
+        logging_level: str = "INFO",
+        log_file: str = "app.log",
+    ):
+        """Initialize ConcallParser.
+
+        Args:
+            path: Path to local PDF file
+            link: URL to PDF file
+            groq_api_key: Optional Groq API key (falls back to env var)
+            groq_model: Optional Groq model name (falls back to env var)
+            save_logs_to_file: Whether to save logs to file
+            logging_level: Logging level (DEBUG/INFO/WARNING/ERROR)
+            log_file: Log file path when save_logs_to_file is True
+        """
+        self.transcript = self._get_document_transcript(filepath=path, link=link)
+        self.groq_api_key = groq_api_key if groq_api_key else get_groq_api_key()
+        self.groq_model = groq_model if groq_model else get_groq_model()
 
         self.company_and_management_extractor = CompanyAndManagementExtractor()
         self.dialogue_extractor = DialogueExtractor()
         self.management_case_extractor = ManagementCaseExtractor()
+        configure_logger(
+            save_to_file=save_logs_to_file,
+            logging_level=logging_level,
+            log_file=log_file,
+        )
 
-    def _get_document_transcript(
-        self, filepath: str, link: str
-    ) -> dict[int, str]:
+    def _get_document_transcript(self, filepath: str, link: str) -> dict[int, str]:
         """Extracts text of a pdf document.
 
         Takes in a filepath (locally stored document) or link (online doc) to extract document
@@ -75,11 +97,9 @@ class ConcallParser:
 
     def extract_commentary(self) -> list:
         """Extracts commentary from the input."""
-        response = (
-            self.dialogue_extractor.extract_commentary_and_future_outlook(
-                transcript=self.transcript,
-                groq_model=self.groq_model,
-            )
+        response = self.dialogue_extractor.extract_commentary_and_future_outlook(
+            transcript=self.transcript,
+            groq_model=self.groq_model,
         )
         return response
 
