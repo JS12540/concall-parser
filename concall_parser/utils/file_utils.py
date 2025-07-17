@@ -1,6 +1,9 @@
+import asyncio
 import json
 import os
+import tempfile
 
+import aiofiles
 import httpx
 import pdfplumber
 
@@ -9,7 +12,7 @@ from concall_parser.log_config import logger
 
 # TODO: use aiofiles for file operations
 # TODO: check out async pdf readers, if not available, use threadpool
-def get_document_transcript(filepath: str) -> dict[int, str]:
+async def get_document_transcript(filepath: str) -> dict[int, str]:
     """Extracts text of a pdf document.
 
     Args:
@@ -18,22 +21,30 @@ def get_document_transcript(filepath: str) -> dict[int, str]:
     Returns:
         transcript: Dictionary of page number, page text pair.
     """
-    transcript = {}
-    try:
-        # TODO: Run this part with async, or in another thread
-        with pdfplumber.open(filepath) as pdf:
-            logger.debug("Loaded document")
-            page_number = 1
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    transcript[page_number] = text
-                    page_number += 1
-        return transcript
-    except FileNotFoundError:
-        raise FileNotFoundError("Please check if file exists.")
-    except Exception:
-        logger.exception("Could not load file %s", filepath)
+
+    def _extract_pdf_text(filepath: str) -> dict[int, str]:
+        transcript = {}
+        try:
+            with pdfplumber.open(filepath) as pdf:
+                logger.debug(f"Loaded document {filepath}")
+                # ? Do we need to start a counter? can we not do pdfplumber pages or enumerate?
+                page_number = 1
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        transcript[page_number] = text
+                        page_number += 1
+            return transcript
+        except FileNotFoundError:
+            logger.exception(
+                f"Could not file with path {filepath}. Please check if it exists."
+            )
+            raise FileNotFoundError("Please check if file exists.")
+        except Exception:
+            logger.exception("Could not load file %s", filepath)
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _extract_pdf_text, filepath)
 
 
 def save_output(
@@ -49,17 +60,20 @@ def save_output(
         output_base_path (str): Path to directory in which outputs are to be saved.
         document_name (str): Name of the file being parsed, corresponds to company name for now.
     """
-    # TODO: Add error handling
-    for dialogue_type, dialogue in dialogues.items():
+    try:
         output_dir_path = os.path.join(
             output_base_path, os.path.basename(document_name)[:-4]
         )
         os.makedirs(output_dir_path, exist_ok=True)
-        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
-            json.dump(dialogue, file, indent=4)
+        for dialogue_type, dialogue in dialogues.items():
+            output_file_path = os.path.join(output_dir_path, f"{dialogue_type}.json")
+            async with aiofiles.open(output_file_path, "w") as file:
+                await file.write(json.dump(dialogue, indent=4))
+    except Exception:
+        logger.exception(f"Failed to save outputs for file {output_base_path}.")
 
 
-def save_transcript(
+async def save_transcript(
     transcript: dict,
     document_path: str,
     output_base_path: str = "raw_transcript",
@@ -77,16 +91,18 @@ def save_transcript(
         document_name = os.path.basename(document_path)[:-4]  # remove the .pdf
         output_dir_path = os.path.join(output_base_path, document_name)
         os.makedirs(output_base_path, exist_ok=True)
-        with open(f"{output_dir_path}.txt", "w") as file:
+        # ? concatenate all transcript texts before writing at once? IO overhead?
+        async with aiofiles.open(f"{output_dir_path}.txt", "w") as file:
             for _, text in transcript.items():
-                file.write(text)
-                file.write("\n\n")
+                await file.write(text)
+                await file.write("\n\n")
+            # ? Do we gather all tasks before asynchronously executing?
         logger.info("Saved transcript text to file\n")
     except Exception:
         logger.exception("Could not save document transcript")
 
 
-def get_transcript_from_link(link: str) -> dict[int, str]:
+async def get_transcript_from_link(link: str) -> dict[int, str]:
     """Extracts transcript by downloading pdf from a given link.
 
     Args:
@@ -99,23 +115,30 @@ def get_transcript_from_link(link: str) -> dict[int, str]:
         Http error, if encountered during downloading document.
     """
     try:
+        # TODO: expand error handling - file operations
         logger.debug("Request to get transcript from link.")
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"  # noqa: E501
         }
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as file:
+            temp_file_path = file.name
+        
         async with httpx.AsyncClient(headers=headers) as client:
             response = await client.get(url=link, timeout=30)
-        response.raise_for_status()
+            response.raise_for_status()
 
-        temp_doc_path = "temp_document.pdf"
-        with open(temp_doc_path, "wb") as temp_pdf:
-            for chunk in response.iter_content(chunk_size=8192):
-                temp_pdf.write(chunk)
-        transcript = get_document_transcript(filepath=temp_doc_path)
-        os.remove(temp_doc_path)
+            with aiofiles.open(temp_file_path, "wb") as file:
+                async for chunk in response.aiter_bytes(chunk_size=8192):
+                    await file.write(chunk)
 
+        transcript = await get_document_transcript(filepath=temp_file_path)
         return transcript
+    
     except Exception:
         logger.exception("Could not get transcript from link")
         return dict()
+    
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
