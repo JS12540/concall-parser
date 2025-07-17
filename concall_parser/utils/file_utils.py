@@ -7,6 +7,8 @@ import pdfplumber
 from concall_parser.log_config import logger
 
 
+# TODO: use aiofiles for file operations
+# TODO: check out async pdf readers, if not available, use threadpool
 def get_document_transcript(filepath: str) -> dict[int, str]:
     """Extracts text of a pdf document.
 
@@ -18,6 +20,7 @@ def get_document_transcript(filepath: str) -> dict[int, str]:
     """
     transcript = {}
     try:
+        # TODO: Run this part with async, or in another thread
         with pdfplumber.open(filepath) as pdf:
             logger.debug("Loaded document")
             page_number = 1
@@ -46,14 +49,13 @@ def save_output(
         output_base_path (str): Path to directory in which outputs are to be saved.
         document_name (str): Name of the file being parsed, corresponds to company name for now.
     """
+    # TODO: Add error handling
     for dialogue_type, dialogue in dialogues.items():
         output_dir_path = os.path.join(
             output_base_path, os.path.basename(document_name)[:-4]
         )
         os.makedirs(output_dir_path, exist_ok=True)
-        with open(
-            os.path.join(output_dir_path, f"{dialogue_type}.json"), "w"
-        ) as file:
+        with open(os.path.join(output_dir_path, f"{dialogue_type}.json"), "w") as file:
             json.dump(dialogue, file, indent=4)
 
 
@@ -84,15 +86,15 @@ def save_transcript(
         logger.exception("Could not save document transcript")
 
 
-def get_transcript_from_link(link:str) -> dict[int, str]:
+def get_transcript_from_link(link: str) -> dict[int, str]:
     """Extracts transcript by downloading pdf from a given link.
-    
+
     Args:
         link: Link to the pdf document of earnings call report.
-        
+
     Returns:
         transcript: A page number-page text mapping.
-    
+
     Raises:
         Http error, if encountered during downloading document.
     """
@@ -100,14 +102,14 @@ def get_transcript_from_link(link:str) -> dict[int, str]:
         logger.debug("Request to get transcript from link.")
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"# noqa: E501
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"  # noqa: E501
         }
         async with httpx.AsyncClient(headers=headers) as client:
             response = await client.get(url=link, timeout=30)
         response.raise_for_status()
 
         temp_doc_path = "temp_document.pdf"
-        with open(temp_doc_path, 'wb') as temp_pdf:
+        with open(temp_doc_path, "wb") as temp_pdf:
             for chunk in response.iter_content(chunk_size=8192):
                 temp_pdf.write(chunk)
         transcript = get_document_transcript(filepath=temp_doc_path)

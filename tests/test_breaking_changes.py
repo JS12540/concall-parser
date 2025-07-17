@@ -1,5 +1,6 @@
 import filecmp
 
+from concall_parser.log_config import logger
 from tests.test_parsing import process_single_file
 
 
@@ -19,9 +20,9 @@ def test_single_file_processing(filepath, output_dir, expected_output_dir):
             output_dir, expected_output_dir
         ), "Output does not match expected"
     except AssertionError:
-        print("Broken -- fix it")
+        logger.exception(f"Failed to process file {filepath}")
         return
-    print("Test passed")
+    logger.info(f"Parsing successful for {filepath}")
 
 
 def test_multiple_files_processing(input_files, output_dir, expected_output_dirs):
@@ -30,7 +31,6 @@ def test_multiple_files_processing(input_files, output_dir, expected_output_dirs
         test_single_file_processing(input_file, output_dir, expected_output_dir)
 
 
-# TODO: upgrade to pytest-regressions
 if __name__ == "__main__":
     test_single_file_processing(
         filepath="test_documents/ambuja_cement.pdf",
