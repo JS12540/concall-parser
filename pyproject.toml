@@ -1,49 +1,44 @@
-[tool.poetry]
+[project]
 name = "concall-parser"
 version = "1.0.4"
 description = "A parser for extracting analyst discussion and management commentary efficiently from concalls."
 authors = [
-    "Jay Shah <jayshah0726@gmail.com>",
-    "Pranshu Raj <pranshuraj65536@gmail.com>"
+    { name = "Jay Shah", email = "jayshah0726@gmail.com" },
+    { name = "Pranshu Raj", email = "pranshuraj65536@gmail.com" },
 ]
-maintainers = [
-    "Pranshu Raj <pranshuraj65536@gmail.com>"
-]
+maintainers = [{ name = "Pranshu Raj", email = "pranshuraj65536@gmail.com" }]
 readme = "README.md"
-packages = [
-    { include = "concall_parser", from = "." },
+requires-python = ">=3.10"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "groq==0.22.0",
+    "httpx>=0.28.1",
+    "pdfplumber==0.11.5",
+    "python-dotenv==1.1.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-groq = "0.22.0"
-pdfplumber = "0.11.5"
-python-dotenv = "1.1.0"
-requests = "2.32.2"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "0.4.1"
-pre-commit = "3.7.0"
+[project.optional-dependencies]
+dev = ["ruff==0.4.1", "pre-commit==3.7.0"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["concall_parser"]
 
 [tool.ruff]
 line-length = 80
 indent-width = 4
 target-version = "py310"
-extend-exclude = [
-    "__init__.py",
-    "migrations",
-]
+extend-exclude = ["__init__.py", "migrations"]
 
 [tool.ruff.lint]
 extend-select = [
     "UP", # pyupgrade
-    "E", # pycodestyle
-    "I", # isort
-    "D", # pydocstyle
+    "E",  # pycodestyle
+    "I",  # isort
+    "D",  # pydocstyle
 ]
 
 ignore = [
