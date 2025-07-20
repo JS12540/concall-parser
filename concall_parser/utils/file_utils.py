@@ -10,8 +10,6 @@ import pdfplumber
 from concall_parser.log_config import logger
 
 
-# TODO: use aiofiles for file operations
-# TODO: check out async pdf readers, if not available, use threadpool
 async def get_document_transcript(filepath: str) -> dict[int, str]:
     """Extracts text of a pdf document.
 
@@ -47,7 +45,7 @@ async def get_document_transcript(filepath: str) -> dict[int, str]:
     return await loop.run_in_executor(None, _extract_pdf_text, filepath)
 
 
-def save_output(
+async def save_output(
     dialogues: dict, document_name: str, output_base_path: str = "output"
 ) -> None:
     """Save dialogues to JSON files in the specified output path.
@@ -124,11 +122,12 @@ async def get_transcript_from_link(link: str) -> dict[int, str]:
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as file:
             temp_file_path = file.name
         
-        async with httpx.AsyncClient(headers=headers) as client:
+        # TODO: add some checks to check correct file is being downloaded
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
             response = await client.get(url=link, timeout=30)
             response.raise_for_status()
 
-            with aiofiles.open(temp_file_path, "wb") as file:
+            async with aiofiles.open(temp_file_path, "wb") as file:
                 async for chunk in response.aiter_bytes(chunk_size=8192):
                     await file.write(chunk)
 
