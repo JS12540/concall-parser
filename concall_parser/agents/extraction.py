@@ -64,7 +64,7 @@ Guruprasad Mudlapur
 Kunal Dhamesha
 Disclaimer
 Currently, 34 wells have been put on stream
-\u2013 Managing Director and Chief Executive Officer, Siemens Limited - Thank you very much and all the best and a very happy year ahead.
+– Managing Director and Chief Executive Officer, Siemens Limited - Thank you very much and all the best and a very happy year ahead.
 
 
 Output:
@@ -98,17 +98,21 @@ class ExtractManagement:
         Returns:
             None
         """
-        # TODO: context selection logic is wrong, recheck
-        if page_text != "":
+        # TODO: context selection logic is wrong, recheck.
+        # The current logic switches context if page_text is empty, which is likely not
+        # the intended behavior for SPEAKER_SELECTION_CONTEXT. An empty page_text
+        # should probably result in an empty response or an error.
+        if page_text:  # Pythonic way to check for non-empty string
             messages = [
                 {"role": "system", "content": CONTEXT},
                 {"role": "user", "content": page_text},
             ]
         else:
-            messages = [
-                {"role": "system", "content": SPEAKER_SELECTION_CONTEXT},
-                {"role": "user", "content": page_text},
-            ]
+            # This branch is reached if page_text is empty.
+            # Using SPEAKER_SELECTION_CONTEXT with an empty user message is likely incorrect.
+            # Consider returning an empty dict or raising an error here.
+            logger.warning("Received empty page_text for extraction. Returning empty response.")
+            return "{}"  # Returning an empty JSON string as per "If no management information is found, return an empty dict: {}."
 
         # TODO: update data model of response in case of speaker selection
         # TODO: add company name fix in case of speaker selection
@@ -119,3 +123,4 @@ class ExtractManagement:
             logger.exception(
                 "Could not get groq response for management extraction"
             )
+            return "{}"  # Ensure a consistent return type even on error

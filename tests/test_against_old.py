@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib
 
 import pytest
 
@@ -10,7 +11,7 @@ PDF_DIR = "tests/test_documents"
 
 
 @pytest.mark.parametrize("pdf_file", [
-    os.path.join(PDF_DIR, f) for f in os.listdir(PDF_DIR) if f.endswith(".pdf")
+    str(p) for p in pathlib.Path(PDF_DIR).glob("*.pdf")
 ])
 def test_pdf_parser_regression(pdf_file, data_regression):
     """Test against saved working version of output."""

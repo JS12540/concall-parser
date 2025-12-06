@@ -15,6 +15,9 @@ class CompanyAndManagementExtractor(BaseExtractor):
                 page_text=text, groq_model=groq_model
             )
             return json.loads(response)
+        except json.JSONDecodeError:
+            logger.exception("Failed to decode JSON response from management extraction.")
+            return {}
         except Exception:
-            logger.exception("Failed to extract management team.")
+            logger.exception("An unexpected error occurred during management extraction.")
             return {}

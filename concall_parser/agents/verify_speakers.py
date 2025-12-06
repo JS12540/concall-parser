@@ -80,7 +80,7 @@ class VerifySpeakerNames:
     """Finds actual names from extracted speaker pattern."""
 
     @staticmethod
-    def process(speakers: str, groq_model: str):
+    def process(speakers: str, groq_model: str) -> str:
         """Returns the actual names out of all the speaker pattern matches provided.
 
         Args:

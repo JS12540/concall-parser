@@ -23,7 +23,7 @@ class TestChoices(Enum):
 
 def process_single_file(filepath: str, output_path: str):
     """Run a single file and save its output and log."""
-    logger.debug("Starting testing for %s", filepath)
+    logger.debug(f"Starting testing for {filepath}")
     transcript = get_document_transcript(filepath)
     save_transcript(transcript, output_path, "raw_transcript")
 
@@ -43,38 +43,54 @@ def process_batch(test_dir_path: str, test_all: bool = False):
         test_all (bool): Flag to toggle testing all documents or only those
             that failed last test.
     """
+    error_files = set()
     if os.path.exists(FAILED_FILES_LOG):
-        with open(FAILED_FILES_LOG) as file:
-            error_files = file.readlines()
-    # TODO: make standard testing methods
-    # if os.path.exists(SUCCESS_FILES_LOG):
-    #     with open(SUCCESS_FILES_LOG) as file:
-    #         success_files = file.readlines()
+        # Use 'with' statement and specify encoding for robustness
+        with open(FAILED_FILES_LOG, "r", encoding="utf-8") as file:
+            error_files = {line.strip() for line in file if line.strip()}
 
-    failed = open(FAILED_FILES_LOG, "w")
-    successful = open(SUCCESS_FILES_LOG, "w")
-
+    files_to_process = set()
     if not test_all:
-        files_to_test = error_files
+        files_to_process = error_files
     else:
-        files_to_test = set(os.listdir(test_dir_path))
-        # also include option to not test successful
+        # Use os.scandir for efficiency and to filter out directories
+        files_to_process = {
+            entry.name
+            for entry in os.scandir(test_dir_path)
+            if entry.is_file()
+        }
+        # TODO: make standard testing methods
+        # The original code had a commented section for skipping successful files.
+        # If that functionality is desired, it would be implemented here.
+        # if os.path.exists(SUCCESS_FILES_LOG):
+        #     with open(SUCCESS_FILES_LOG, "r", encoding="utf-8") as file:
+        #         successful_files = {line.strip() for line in file if line.strip()}
+        #     files_to_process -= successful_files
 
-    for path in files_to_test:
-        try:
+    # Sort files for consistent processing order, useful for debugging and reproducibility
+    files_to_process_sorted = sorted(list(files_to_process))
+
+    # Use 'with' statements for log files to ensure they are properly closed
+    with open(FAILED_FILES_LOG, "w", encoding="utf-8") as failed_log, \
+         open(SUCCESS_FILES_LOG, "w", encoding="utf-8") as successful_log:
+
+        for path in files_to_process_sorted:
             filepath = os.path.join(test_dir_path, path)
-            logger.info("Testing %s\n", path)
-            process_single_file(filepath, path)
-            successful.write(path + "\n")
-        except Exception:
-            failed.write(path + "\n")
-            logger.exception(
-                "Error while processing file %s", path
-            )
-            continue
 
-    failed.close()
-    successful.close()
+            # Double-check if the path points to an actual file
+            if not os.path.isfile(filepath):
+                logger.warning(f"Skipping non-file entry: {filepath}")
+                failed_log.write(path + "\n") # Log non-files as failed to prevent re-attempting
+                continue
+
+            try:
+                logger.info(f"Testing {path}")
+                process_single_file(filepath, path)
+                successful_log.write(path + "\n")
+            except Exception: # Catching bare Exception is generally discouraged but kept for original intent
+                failed_log.write(path + "\n")
+                logger.exception(f"Error while processing file {path}")
+                continue
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ def test_handle_only_management_case(filepath: str) -> None:
     Args:
         filepath: Path to the PDF file containing the transcript.
     """
-    transcript: dict[int, str] = {}
+    transcript: dict[str, str] = {}
 
     with pdfplumber.open(filepath) as pdf:
         for page in pdf.pages:

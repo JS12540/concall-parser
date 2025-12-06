@@ -62,10 +62,10 @@ class ConcallParser:
             transcript: Dictionary of page number, page text pair.
 
         Raises:
-            Exception in case neither of filepath or link are provided.
+            ValueError: In case neither of filepath or link are provided.
         """
         if not (filepath or link):
-            raise Exception(
+            raise ValueError(
                 "Concall source cannot be empty. Provide filepath or link to concall."
             )
 
