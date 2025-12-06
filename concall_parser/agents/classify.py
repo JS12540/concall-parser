@@ -13,16 +13,16 @@ You need to provide a reasoning for the classification. Why this intent was choo
 
 Response should be in json format for opening and end, like this:
 {
-    "intent": "opening"
-    "reasoning": Provide a reasoning for the intent
+    "intent": "opening",
+    "reasoning": "Provide a reasoning for the intent"
 }
 
 If it's new_analyst_start, response should be in json format like this:
 {
     "intent": "new_analyst_start",
     "analyst_name":"analyst_name present in the moderator statement",
-    "analyst_company:""analyst_company present in the moderator statement"
-    "reasoning": Provide a reasoning for the intent
+    "analyst_company": "analyst_company present in the moderator statement",
+    "reasoning": "Provide a reasoning for the intent"
 }
 
 EXAMPLES:
@@ -32,7 +32,7 @@ Earnings Conference Call. "
 
 Response:
 {
-    "intent": "opening"
+    "intent": "opening",
     "reasoning": "From the moderator statement, it's the start of the call, as the moderator is welcoming everyone to the concall."
 }
 
@@ -42,9 +42,9 @@ is from the line of Mukesh Saraf at Avendus Spark. "
 
 Response:
 {
-    "intent": "new_analyst_start"
-    "analyst_name": "Mukesh Saraf"
-    "analyst_company": "Avendus Spark"
+    "intent": "new_analyst_start",
+    "analyst_name": "Mukesh Saraf",
+    "analyst_company": "Avendus Spark",
     "reasoning": "From the moderator statement, it's introducing an analyst from a new company to start the Q&A session."
 }
 
@@ -52,7 +52,7 @@ Moderator statement: "Shall we go for the closing, sir?"
 
 Response:
 {
-    "intent": "end"
+    "intent": "end",
     "reasoning": "From the moderator statement, it's closing the call."
 }
 """  # noqa

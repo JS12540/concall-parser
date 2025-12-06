@@ -27,13 +27,20 @@ def main():
     bump_type = sys.argv[1] if len(sys.argv) > 1 else "patch"
     path = "pyproject.toml"
 
-    with open(path) as f:
-        content = f.read()
+    try:
+        with open(path, 'r') as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"::error:: File not found: {path}")
+        sys.exit(1)
+    except IOError as e:
+        print(f"::error:: Error reading file {path}: {e}")
+        sys.exit(1)
 
     match = re.search(r'version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', content)
     if not match:
-        print("Version not found in pyproject.toml")
-        return
+        print(f"::error:: Version not found in {path}")
+        sys.exit(1)
 
     current_version = f"{match.group(1)}.{match.group(2)}.{match.group(3)}"
     new_version = bump_version(current_version, bump_type)
@@ -46,11 +53,22 @@ def main():
         content,
     )
 
-    with open(path, "w") as f:
-        f.write(new_content)
+    try:
+        with open(path, "w") as f:
+            f.write(new_content)
+    except IOError as e:
+        print(f"::error:: Error writing to file {path}: {e}")
+        sys.exit(1)
 
-    with open(os.environ["GITHUB_OUTPUT"], "a") as gh_out:
-        gh_out.write(f"new_version={new_version}\n")
+    github_output_path = os.environ.get("GITHUB_OUTPUT")
+    if github_output_path:
+        try:
+            with open(github_output_path, "a") as gh_out:
+                gh_out.write(f"new_version={new_version}\n")
+        except IOError as e:
+            print(f"::warning:: Error writing to GITHUB_OUTPUT ({github_output_path}): {e}")
+    else:
+        print("::warning:: GITHUB_OUTPUT environment variable not set. Cannot output new_version.")
 
 
 if __name__ == "__main__":
