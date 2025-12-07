@@ -5,6 +5,24 @@ from concall_parser.log_config import logger
 
 class ManagementCaseExtractor:
     """Handles case where moderator is not present."""
+
+    # Pre-compile the regex for performance and readability
+    SPEAKER_SPEECH_PATTERN = re.compile(
+        r"""
+        ([A-Z]\.\s)?         # Optional initial (e.g., "J. "). Group 1.
+        ([A-Za-z\s]+)        # Speaker name (e.g., "John Doe"). Group 2.
+        :\s                  # Colon and space separator.
+        (.*?)                # Non-greedy match for the speech content. Group 3.
+        (?=                  # Positive lookahead for either:
+            \s[A-Z]\.?\s?    #   Another speaker pattern (space, initial, optional dot, optional space,
+            [A-Za-z\s]+:\s   #   name, colon, space).
+            |                # OR
+            $                #   End of the string.
+        )
+        """,
+        re.DOTALL | re.VERBOSE,
+    )
+
     def extract(self, transcript: dict[str, str]):
         """Extracts speaker names and their corresponding speeches from the transcript.
         
@@ -21,11 +39,7 @@ class ManagementCaseExtractor:
         speech_pair: dict[str, list[str]] = {}
 
         for _, text in transcript.items():
-            matches = re.findall(
-                r"([A-Z]\.\s)?([A-Za-z\s]+):\s(.*?)(?=\s[A-Z]\.?\s?[A-Za-z\s]+:\s|$)",
-                text,
-                re.DOTALL,
-            )
+            matches = self.SPEAKER_SPEECH_PATTERN.findall(text)
 
             for initial, name, speech in matches:
                 speaker = (

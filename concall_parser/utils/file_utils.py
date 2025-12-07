@@ -1,5 +1,4 @@
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -123,7 +122,10 @@ def get_transcript_from_link(link:str) -> dict[int, str]:
         logger.debug("Request to get transcript from link: %s", link)
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" # noqa: E501
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            )
         }
         # Use a higher timeout for potentially large PDF downloads
         response = requests.get(url=link, headers=headers, timeout=60, stream=True)
@@ -152,7 +154,7 @@ def get_transcript_from_link(link:str) -> dict[int, str]:
         # Ensure the temporary file is cleaned up, even if errors occur
         if temp_doc_path and temp_doc_path.exists(): # Check if path was assigned and exists
             try:
-                os.remove(temp_doc_path)
+                temp_doc_path.unlink()
                 logger.debug("Cleaned up temporary file: %s", temp_doc_path)
             except OSError as e:
                 logger.warning("Could not remove temporary file %s: %s", temp_doc_path, e)

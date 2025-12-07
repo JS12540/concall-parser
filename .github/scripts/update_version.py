@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from pathlib import Path
 
 
 def bump_version(version: str, bump_type: str) -> str:
@@ -25,21 +26,20 @@ def bump_version(version: str, bump_type: str) -> str:
 def main():
     """Main function for incrementing the version."""
     bump_type = sys.argv[1] if len(sys.argv) > 1 else "patch"
-    path = "pyproject.toml"
+    toml_path = Path("pyproject.toml")
 
     try:
-        with open(path, 'r') as f:
-            content = f.read()
+        content = toml_path.read_text()
     except FileNotFoundError:
-        print(f"::error:: File not found: {path}")
+        print(f"::error:: File not found: {toml_path}")
         sys.exit(1)
     except IOError as e:
-        print(f"::error:: Error reading file {path}: {e}")
+        print(f"::error:: Error reading file {toml_path}: {e}")
         sys.exit(1)
 
     match = re.search(r'version\s*=\s*"(\d+)\.(\d+)\.(\d+)"', content)
     if not match:
-        print(f"::error:: Version not found in {path}")
+        print(f"::error:: Version not found in {toml_path}")
         sys.exit(1)
 
     current_version = f"{match.group(1)}.{match.group(2)}.{match.group(3)}"
@@ -54,16 +54,16 @@ def main():
     )
 
     try:
-        with open(path, "w") as f:
-            f.write(new_content)
+        toml_path.write_text(new_content)
     except IOError as e:
-        print(f"::error:: Error writing to file {path}: {e}")
+        print(f"::error:: Error writing to file {toml_path}: {e}")
         sys.exit(1)
 
-    github_output_path = os.environ.get("GITHUB_OUTPUT")
-    if github_output_path:
+    github_output_path_str = os.environ.get("GITHUB_OUTPUT")
+    if github_output_path_str:
+        github_output_path = Path(github_output_path_str)
         try:
-            with open(github_output_path, "a") as gh_out:
+            with github_output_path.open("a") as gh_out:
                 gh_out.write(f"new_version={new_version}\n")
         except IOError as e:
             print(f"::warning:: Error writing to GITHUB_OUTPUT ({github_output_path}): {e}")

@@ -1,5 +1,3 @@
-from typing import List, Dict, Any
-
 from groq import APIStatusError, Groq
 
 from concall_parser.config import get_groq_api_key
@@ -8,7 +6,7 @@ from concall_parser.log_config import logger
 client = Groq(api_key=get_groq_api_key())
 
 
-def get_groq_response(messages: List[Dict[str, str]], model: str) -> str | None:
+def get_groq_response(messages: list[dict[str, str]], model: str) -> str | None:
     """Get response from Groq API."""
     try:
         response = client.chat.completions.create(

@@ -1,5 +1,6 @@
 from concall_parser.log_config import logger
 from concall_parser.utils.get_groq_responses import get_groq_response
+import json
 
 # TODO: add second prompt case, for apollo (may be solved using regex but idk)
 
@@ -87,7 +88,7 @@ class ExtractManagement:
     """Class to extract management information from a PDF document."""
 
     @staticmethod
-    def process(page_text: str, groq_model: str) -> str:
+    def process(page_text: str, groq_model: str) -> dict:
         """Process the given page text to extract relevant management information.
 
         Args:
@@ -96,31 +97,38 @@ class ExtractManagement:
             groq_model (str): The model to use for Groq queries.
 
         Returns:
-            None
+            dict: A dictionary containing extracted management information,
+                  or an empty dictionary if no information is found or an error occurs.
         """
         # TODO: context selection logic is wrong, recheck.
         # The current logic switches context if page_text is empty, which is likely not
         # the intended behavior for SPEAKER_SELECTION_CONTEXT. An empty page_text
         # should probably result in an empty response or an error.
-        if page_text:  # Pythonic way to check for non-empty string
-            messages = [
-                {"role": "system", "content": CONTEXT},
-                {"role": "user", "content": page_text},
-            ]
-        else:
-            # This branch is reached if page_text is empty.
-            # Using SPEAKER_SELECTION_CONTEXT with an empty user message is likely incorrect.
-            # Consider returning an empty dict or raising an error here.
+        if not page_text:  # More explicit check for empty string
             logger.warning("Received empty page_text for extraction. Returning empty response.")
-            return "{}"  # Returning an empty JSON string as per "If no management information is found, return an empty dict: {}."
+            return {}  # Return empty dict directly
+
+        # The current implementation always uses CONTEXT. The TODOs indicate a missing
+        # context selection logic for SPEAKER_SELECTION_CONTEXT.
+        messages = [
+            {"role": "system", "content": CONTEXT},
+            {"role": "user", "content": page_text},
+        ]
 
         # TODO: update data model of response in case of speaker selection
         # TODO: add company name fix in case of speaker selection
         try:
-            response = get_groq_response(messages=messages, model=groq_model)
-            return response
+            response_str = get_groq_response(messages=messages, model=groq_model)
+            # Attempt to parse the response as JSON for robustness and consistency
+            parsed_response = json.loads(response_str)
+            return parsed_response
+        except json.JSONDecodeError:
+            logger.exception(
+                "Groq response for management extraction was not valid JSON."
+            )
+            return {}
         except Exception:
             logger.exception(
                 "Could not get groq response for management extraction"
             )
-            return "{}"  # Ensure a consistent return type even on error
+            return {}  # Ensure a consistent return type even on error

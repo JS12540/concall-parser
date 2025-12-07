@@ -70,16 +70,13 @@ class ConcallParser:
             )
 
         if link:
-            self.transcript = get_transcript_from_link(link=link)
+            transcript = get_transcript_from_link(link=link)
         else:
-            self.transcript = get_document_transcript(filepath=filepath)
-        return self.transcript
+            transcript = get_document_transcript(filepath=filepath)
+        return transcript
 
     def extract_concall_info(self) -> dict:
         """Extracts company name and management team from the transcript.
-
-        Args:
-            None
 
         Returns:
             dict: Company name and management team as a dictionary.

@@ -68,26 +68,27 @@ def process_batch(test_dir_path: str, test_all: bool = False):
         #     files_to_process -= successful_files
 
     # Sort files for consistent processing order, useful for debugging and reproducibility
-    files_to_process_sorted = sorted(list(files_to_process))
+    files_to_process_sorted = sorted(files_to_process)
 
     # Use 'with' statements for log files to ensure they are properly closed
-    with open(FAILED_FILES_LOG, "w", encoding="utf-8") as failed_log, \
-         open(SUCCESS_FILES_LOG, "w", encoding="utf-8") as successful_log:
-
+    with (
+        open(FAILED_FILES_LOG, "w", encoding="utf-8") as failed_log,
+        open(SUCCESS_FILES_LOG, "w", encoding="utf-8") as successful_log,
+    ):
         for path in files_to_process_sorted:
             filepath = os.path.join(test_dir_path, path)
 
             # Double-check if the path points to an actual file
             if not os.path.isfile(filepath):
                 logger.warning(f"Skipping non-file entry: {filepath}")
-                failed_log.write(path + "\n") # Log non-files as failed to prevent re-attempting
+                failed_log.write(path + "\n")  # Log non-files as failed to prevent re-attempting
                 continue
 
             try:
                 logger.info(f"Testing {path}")
                 process_single_file(filepath, path)
                 successful_log.write(path + "\n")
-            except Exception: # Catching bare Exception is generally discouraged but kept for original intent
+            except Exception:  # Catching bare Exception is generally discouraged but kept for original intent
                 failed_log.write(path + "\n")
                 logger.exception(f"Error while processing file {path}")
                 continue

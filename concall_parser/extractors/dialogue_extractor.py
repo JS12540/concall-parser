@@ -36,9 +36,19 @@ class DialogueExtractor:
         cleaned = clean_text(leftover_text)
 
         if current_analyst:
-            self.dialogues["analyst_discussion"][current_analyst]["dialogue"][
-                -1
-            ]["dialogue"] += f" {cleaned}"
+            analyst_dialogues = self.dialogues["analyst_discussion"][current_analyst][
+                "dialogue"
+            ]
+            if analyst_dialogues:
+                analyst_dialogues[-1]["dialogue"] += f" {cleaned}"
+            else:
+                # If this is the first dialogue for the analyst, treat leftover as their initial statement.
+                analyst_dialogues.append(
+                    {
+                        "speaker": current_analyst,  # Assuming the analyst is speaking
+                        "dialogue": cleaned,
+                    }
+                )
         elif self.dialogues["commentary_and_future_outlook"]:
             self.dialogues["commentary_and_future_outlook"][-1]["dialogue"] += (
                 f" {cleaned}"
@@ -76,29 +86,28 @@ class DialogueExtractor:
                 }
             )
 
-    def _process_match(
-        self, match, groq_model: str, current_analyst: str | None
-    ):
-        speaker = match.group("speaker").strip()
-        dialogue = match.group("dialogue")
-        intent = None
-
-        if speaker == "Moderator":
-            response = json.loads(
-                ClassifyModeratorIntent.process(
-                    dialogue=dialogue, groq_model=groq_model
-                )
+    def _process_moderator_dialogue(
+        self, dialogue: str, groq_model: str
+    ) -> tuple[str, str | None]:
+        """Processes moderator dialogue to classify intent and extract analyst info.
+        Updates self.dialogues directly for new analyst discussions.
+        """
+        response = json.loads(
+            ClassifyModeratorIntent.process(
+                dialogue=dialogue, groq_model=groq_model
             )
-            intent = response["intent"]
-            if intent == "new_analyst_start":
-                current_analyst = response["analyst_name"]
-                self.dialogues["analyst_discussion"][current_analyst] = {
-                    "analyst_company": response["analyst_company"],
-                    "dialogue": [],
-                }
-            return intent, current_analyst, None  # Moderator handled
+        )
+        intent = response["intent"]
+        current_analyst = None
 
-        return intent, current_analyst, (speaker, dialogue)
+        if intent == "new_analyst_start":
+            current_analyst = response["analyst_name"]
+            analyst_company = response["analyst_company"]
+            self.dialogues["analyst_discussion"][current_analyst] = {
+                "analyst_company": analyst_company,
+                "dialogue": [],
+            }
+        return intent, current_analyst
 
     def extract_commentary_and_future_outlook(
         self, transcript: dict[int, str], groq_model: str
@@ -126,15 +135,12 @@ class DialogueExtractor:
             for match in self.speaker_pattern.finditer(text):
                 speaker = match.group("speaker").strip()
                 last_speaker = speaker
+                dialogue_content = match.group("dialogue")
 
                 if speaker == "Moderator":
-                    response = json.loads(
-                        ClassifyModeratorIntent.process(
-                            dialogue=match.group("dialogue"),
-                            groq_model=groq_model,
-                        )
+                    intent, current_analyst = self._process_moderator_dialogue(
+                        dialogue_content, groq_model
                     )
-                    intent = response["intent"]
                     if intent == "new_analyst_start":
                         return self.dialogues["commentary_and_future_outlook"]
                     continue
@@ -142,7 +148,7 @@ class DialogueExtractor:
                 if intent == "opening":
                     self._append_dialogue(
                         speaker,
-                        match.group("dialogue"),
+                        dialogue_content,
                         intent,
                         current_analyst,
                     )
@@ -178,30 +184,19 @@ class DialogueExtractor:
             for match in self.speaker_pattern.finditer(text):
                 speaker = match.group("speaker").strip()
                 last_speaker = speaker
+                dialogue_content = match.group("dialogue")
 
                 if speaker == "Moderator":
-                    response = json.loads(
-                        ClassifyModeratorIntent.process(
-                            dialogue=match.group("dialogue"),
-                            groq_model=groq_model,
-                        )
+                    intent, current_analyst = self._process_moderator_dialogue(
+                        dialogue_content, groq_model
                     )
-                    intent = response["intent"]
-                    if intent == "new_analyst_start":
-                        current_analyst = response["analyst_name"]
-                        self.dialogues["analyst_discussion"][
-                            current_analyst
-                        ] = {
-                            "analyst_company": response["analyst_company"],
-                            "dialogue": [],
-                        }
                     continue
 
                 if intent is None:
                     break
 
                 self._append_dialogue(
-                    speaker, match.group("dialogue"), intent, current_analyst
+                    speaker, dialogue_content, intent, current_analyst
                 )
 
         return self.dialogues

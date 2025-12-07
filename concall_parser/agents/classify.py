@@ -62,7 +62,7 @@ class ClassifyModeratorIntent:
     """Classify moderator statements into categories."""
 
     @staticmethod
-    def process(dialogue: str, groq_model: str):
+    def process(dialogue: str, groq_model: str) -> str:
         """Classify a moderator statement into one of the three categories.
 
         Args:
