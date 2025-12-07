@@ -81,10 +81,13 @@ class CheckModerator:
             {"role": "system", "content": CONTEXT},
             {"role": "user", "content": page_text},
         ]
+        response = '{"moderator": ""}'  # Initialize with a default value to prevent UnboundLocalError
         try:
             response = get_groq_response(messages=messages, model=groq_model)
         except Exception:
             logger.exception(
                 "Could not get groq response for management extraction"
             )
+            # If an exception occurs, the initialized default response will be returned.
+            # This ensures the function always returns a string as per its type hint.
         return response

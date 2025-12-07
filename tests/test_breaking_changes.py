@@ -1,5 +1,4 @@
 import filecmp
-from typing import List
 from pathlib import Path
 
 from tests.test_parsing import process_single_file
@@ -27,7 +26,7 @@ def test_single_file_processing(filepath: Path, output_dir: Path, expected_outpu
     print("Test passed")
 
 
-def test_multiple_files_processing(input_files: List[Path], output_dir: Path, expected_output_dirs: List[Path]) -> None:
+def test_multiple_files_processing(input_files: list[Path], output_dir: Path, expected_output_dirs: list[Path]) -> None:
     """Test processing multiple files and compare the outputs with the expected outputs."""
     for input_file, expected_output_dir in zip(input_files, expected_output_dirs):
         test_single_file_processing(input_file, output_dir, expected_output_dir)
